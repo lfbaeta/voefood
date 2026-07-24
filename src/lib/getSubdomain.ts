@@ -48,7 +48,7 @@ function readRootDomains(): string[] {
         .map((s) => s.trim().toLowerCase())
         .filter(Boolean)
     : [];
-  const defaults = ["peddioficial.lovable.app", "peddi.online"];
+  const defaults = ["voefood.com", "voefood.lovable.app"];
   return Array.from(new Set([...configured, ...defaults]));
 }
 
