@@ -77,11 +77,13 @@ Deno.serve(async (req) => {
       if (api_key.length < 20) return json({ error: 'api_key too short' }, 400);
       const { error } = await admin
         .from('global_ai_config')
-        .update({ openai_api_key: api_key, updated_by: userId, updated_at: new Date().toISOString() })
-        .eq('id', true);
+        .upsert(
+          { id: true, openai_api_key: api_key, updated_by: userId, updated_at: new Date().toISOString() },
+          { onConflict: 'id' }
+        );
       if (error) {
         console.error('set failed', error);
-        return json({ error: 'set_failed' }, 500);
+        return json({ error: 'set_failed', details: error.message }, 500);
       }
       return json({ ok: true });
     }
@@ -89,9 +91,11 @@ Deno.serve(async (req) => {
     if (action === 'clear') {
       const { error } = await admin
         .from('global_ai_config')
-        .update({ openai_api_key: null, updated_by: userId, updated_at: new Date().toISOString() })
-        .eq('id', true);
-      if (error) return json({ error: 'clear_failed' }, 500);
+        .upsert(
+          { id: true, openai_api_key: null, updated_by: userId, updated_at: new Date().toISOString() },
+          { onConflict: 'id' }
+        );
+      if (error) return json({ error: 'clear_failed', details: error.message }, 500);
       return json({ ok: true });
     }
 
