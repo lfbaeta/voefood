@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { consumeSessionFromHash } from '@/lib/crossDomainAuth';
 
 interface AuthContextType {
   user: User | null;
@@ -22,13 +23,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isReseller, setIsReseller] = useState(false);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+    let subscription: { unsubscribe: () => void } | null = null;
+
+    (async () => {
+      // Se veio uma sessão via hash (superadmin acessando outro subdomínio),
+      // aplica antes de configurar listener e checar sessão existente.
+      await consumeSessionFromHash();
+
+      const listener = supabase.auth.onAuthStateChange((event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // Defer role check with setTimeout to avoid deadlock
+
         if (session?.user) {
           setTimeout(() => {
             checkRoles(session.user.id);
@@ -37,22 +42,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIsAdmin(false);
           setIsReseller(false);
         }
-      }
-    );
+      });
+      subscription = listener.data.subscription;
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (session?.user) {
         checkRoles(session.user.id);
       }
-      
-      setIsLoading(false);
-    });
 
-    return () => subscription.unsubscribe();
+      setIsLoading(false);
+    })();
+
+    return () => subscription?.unsubscribe();
   }, []);
 
   const checkRoles = async (userId: string) => {

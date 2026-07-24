@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Search, Store, Loader2 } from 'lucide-react';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openWithCurrentSession } from '@/lib/crossDomainAuth';
 import { useResellerRestaurants } from '@/hooks/useReseller';
 import { SubscriptionStatus } from '@/types/reseller';
 import { useDemoGuard } from '@/hooks/useDemoGuard';
@@ -107,7 +108,7 @@ function RestaurantsContent() {
               restaurant={restaurant}
               onView={(id) => navigate(`/reseller/restaurants/${id}`)}
               onEdit={(id) => navigate(`/reseller/restaurants/${id}`)}
-              onManage={(id) => window.open(`${buildRestaurantUrl(restaurant.slug)}/auth`, '_blank')}
+              onManage={(id) => openWithCurrentSession(`${buildRestaurantUrl(restaurant.slug)}/admin`)}
             />
           ))}
         </div>

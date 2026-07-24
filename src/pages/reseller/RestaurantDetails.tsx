@@ -36,6 +36,7 @@ import { CommunicationHistory } from '@/components/reseller/CommunicationHistory
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openWithCurrentSession } from '@/lib/crossDomainAuth';
 
 
 function RestaurantDetailsContent() {
@@ -87,7 +88,7 @@ function RestaurantDetailsContent() {
           <ExternalLink className="h-4 w-4 mr-2" />
           Ver Cardápio
         </Button>
-        <Button onClick={() => window.open(`${buildRestaurantUrl(restaurant.slug)}/auth`, '_blank')}>
+        <Button onClick={() => openWithCurrentSession(`${buildRestaurantUrl(restaurant.slug)}/admin`)}>
           <Settings className="h-4 w-4 mr-2" />
           Acessar Painel
         </Button>
