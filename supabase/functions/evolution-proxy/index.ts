@@ -496,24 +496,30 @@ serve(async (req) => {
 
       const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
 
+      // Check current connection state (try v2 then Go)
       try {
-        const info = await evoFetch(cfg, `/instance/${encodeURIComponent(uuid)}`, { method: "GET" }, instanceToken);
-        const state = info?.body?.connectionStatus ?? info?.body?.connection ?? info?.body?.status ?? null;
+        let info = await evoFetch(
+          cfg,
+          `/instance/connectionState/${encodeURIComponent(inst.instance_name)}`,
+          { method: "GET" },
+          instanceToken,
+        );
+        if (!info.ok) {
+          info = await evoFetch(cfg, `/instance/${encodeURIComponent(uuid)}`, { method: "GET" }, instanceToken);
+        }
+        const state =
+          info?.body?.instance?.state ??
+          info?.body?.state ??
+          info?.body?.connectionStatus ??
+          info?.body?.connection ??
+          info?.body?.status ??
+          null;
         if (info.ok && (state === "open" || info?.body?.connected === true)) {
           await supaAdmin
             .from("evolution_instances")
             .update({ status: "connected", qr_code: null, qr_expires_at: null, last_connected_at: new Date().toISOString() })
             .eq("id", inst.id);
           return json({ ok: true, qr_code: null, connected: true, already_connected: true });
-        }
-
-        const existingQr = extractQr(info?.body);
-        if (info.ok && existingQr) {
-          await supaAdmin
-            .from("evolution_instances")
-            .update({ status: "waiting_qr", qr_code: existingQr, qr_expires_at: new Date(Date.now() + 660 * 1000).toISOString() })
-            .eq("id", inst.id);
-          return json({ ok: true, qr_code: existingQr, connected: false, reused_server_qr: true });
         }
       } catch (e) {
         console.warn(`[connect_instance] info check failed (continuing): ${(e as Error).message}`);
@@ -524,25 +530,58 @@ serve(async (req) => {
         .update({ status: "waiting_qr", qr_code: null, qr_expires_at: null })
         .eq("id", inst.id);
 
-      const res = await evoFetch(
-        cfg,
-        "/instance/connect",
+      // Try Evolution API v2 first: GET /instance/connect/{instanceName}
+      const connectAttempts: Array<{ label: string; path: string; init: RequestInit }> = [
         {
-          method: "POST",
-          headers: { instanceId: uuid },
-          body: JSON.stringify({ webhookUrl, subscribe: ["ALL"], immediate: true }),
+          label: "v2-name",
+          path: `/instance/connect/${encodeURIComponent(inst.instance_name)}`,
+          init: { method: "GET" },
         },
-        instanceToken,
-      );
+        {
+          label: "go-uuid",
+          path: "/instance/connect",
+          init: {
+            method: "POST",
+            headers: { instanceId: uuid },
+            body: JSON.stringify({ webhookUrl, subscribe: ["ALL"], immediate: true }),
+          },
+        },
+      ];
 
-      if (!res.ok) return json({ ok: false, error: res.message || `Erro ${res.status}`, response: res.body }, 400);
+      let res: EvoFetchResult | null = null;
+      const failed: string[] = [];
+      for (const a of connectAttempts) {
+        console.log(`[connect_instance] -> ${a.init.method} ${a.path} variant=${a.label}`);
+        res = await evoFetch(cfg, a.path, a.init, instanceToken);
+        console.log(`[connect_instance] <- variant=${a.label} status=${res.status} ok=${res.ok}`);
+        if (res.ok) break;
+        failed.push(`${a.label}: ${res.message || res.status}`);
+      }
+
+      if (!res || !res.ok) {
+        return json({ ok: false, error: res?.message || `Erro ${res?.status ?? 0}`, response: res?.body, attempts: failed }, 400);
+      }
 
       let qrString = extractQr(res.body);
       if (!qrString) {
         for (let i = 0; i < 4; i++) {
           await new Promise((r) => setTimeout(r, 1500));
-          const info = await evoFetch(cfg, `/instance/${encodeURIComponent(uuid)}`, { method: "GET" }, instanceToken);
-          const state = info?.body?.connectionStatus ?? info?.body?.connection ?? info?.body?.status ?? null;
+          let info = await evoFetch(
+            cfg,
+            `/instance/connectionState/${encodeURIComponent(inst.instance_name)}`,
+            { method: "GET" },
+            instanceToken,
+          );
+          if (!info.ok) {
+            info = await evoFetch(cfg, `/instance/${encodeURIComponent(uuid)}`, { method: "GET" }, instanceToken);
+          }
+          const state =
+            info?.body?.instance?.state ??
+            info?.body?.state ??
+            info?.body?.connectionStatus ??
+            info?.body?.connection ??
+            info?.body?.status ??
+            null;
           if (info.ok && (state === "open" || info?.body?.connected === true)) {
             await supaAdmin
               .from("evolution_instances")
@@ -550,7 +589,14 @@ serve(async (req) => {
               .eq("id", inst.id);
             return json({ ok: true, qr_code: null, connected: true, already_connected: true });
           }
-          const found = extractQr(info?.body);
+          // Also try v2 connect again to refresh QR
+          const retry = await evoFetch(
+            cfg,
+            `/instance/connect/${encodeURIComponent(inst.instance_name)}`,
+            { method: "GET" },
+            instanceToken,
+          );
+          const found = extractQr(retry?.body) || extractQr(info?.body);
           if (found) {
             qrString = found;
             break;
@@ -567,6 +613,7 @@ serve(async (req) => {
 
       return json({ ok: true, qr_code: qrString, connected: false, response: res.body });
     }
+
 
     if (action === "disconnect_instance") {
       if (!instance_id) return json({ error: "instance_id required" }, 400);
