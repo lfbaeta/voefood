@@ -100,7 +100,8 @@ export function EvolutionInstancesTab() {
     });
     if (id) setBusyId(null);
     if (error || data?.error) {
-      toast({ title: 'Erro', description: data?.error || error?.message, variant: 'destructive' });
+      const description = data?.error || error?.context?.error || error?.message;
+      toast({ title: 'Erro', description, variant: 'destructive' });
       return null;
     }
     return data;

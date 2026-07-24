@@ -26,6 +26,14 @@ type EvoFetchResult = {
   isJson?: boolean;
 };
 
+function evoErrorMessage(result: EvoFetchResult | null, fallbackStatus = 0): string {
+  const status = result?.status ?? fallbackStatus;
+  const body = result?.body;
+  const rawMessage = result?.message ?? body?.message ?? body?.error;
+  const message = Array.isArray(rawMessage) ? rawMessage.join(" ") : rawMessage ? String(rawMessage) : "";
+  return message || `Falha ao criar instância (status ${status})`;
+}
+
 function normalizeUrl(u: string): string {
   let s = u.trim().replace(/\/+$/, "");
   // Strip common panel/admin suffixes that users paste by mistake.
@@ -394,6 +402,7 @@ serve(async (req) => {
       ];
 
       let createRes: EvoFetchResult | null = null;
+      const failedAttempts: string[] = [];
       for (const attempt of createAttempts) {
         console.log(`[create_instance] -> POST /instance/create variant=${attempt.label} name=${safeName} token=${maskKey(generatedToken)}`);
         createRes = await evoFetch(cfg, "/instance/create", {
@@ -402,8 +411,7 @@ serve(async (req) => {
         });
         console.log(`[create_instance] <- variant=${attempt.label} status=${createRes.status} ok=${createRes.ok}`);
         if (createRes.ok) break;
-        // Only retry with next variant on 400/404/422 (schema/route mismatch).
-        if (![400, 404, 422].includes(createRes.status)) break;
+        failedAttempts.push(`${attempt.label}: ${evoErrorMessage(createRes, createRes.status)}`);
       }
 
       if (!createRes || !createRes.ok) {
@@ -416,9 +424,10 @@ serve(async (req) => {
         }
         return json({
           ok: false,
-          error: (createRes?.message || `Falha ao criar instância (status ${status})`) + hint,
+          error: `${evoErrorMessage(createRes, status)}${hint}`,
           response: createRes?.body,
-        }, 400);
+          attempts: failedAttempts,
+        });
       }
 
       const created = createRes.body?.data ?? createRes.body?.instance ?? createRes.body ?? {};
