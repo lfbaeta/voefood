@@ -1,0 +1,396 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+function normalizeEvent(name: string | undefined): string {
+  return (name || "").trim();
+}
+
+function normalizeQrString(value: any): string | null {
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (raw.length <= 20) return null;
+
+  const pipeIndex = raw.indexOf("|");
+  if (pipeIndex >= 0) {
+    const afterPipe = raw.slice(pipeIndex + 1).trim();
+    if (afterPipe.length > 20) return afterPipe;
+    const beforePipe = raw.slice(0, pipeIndex).trim();
+    if (beforePipe.length > 20) return beforePipe;
+  }
+
+  return raw;
+}
+
+function extractQr(obj: any): string | null {
+  if (!obj) return null;
+  const normalized = normalizeQrString(obj);
+  if (normalized) return normalized;
+  if (typeof obj !== "object") return null;
+
+  const candidates = [
+    obj.QRCode,
+    obj.qrcode,
+    obj.qr,
+    obj.Qr,
+    obj.code,
+    obj.Code,
+    obj.base64,
+    obj.Base64,
+    obj.qr_code,
+    obj?.qrcode?.base64,
+    obj?.qrcode?.code,
+    obj?.QRCode?.Base64,
+    obj?.QRCode?.Code,
+    obj?.data?.qrcode,
+    obj?.data?.base64,
+    obj?.data?.code,
+  ];
+  for (const c of candidates) {
+    const found = extractQr(c);
+    if (found) return found;
+  }
+  return null;
+}
+
+function digitsOnly(s: string | null | undefined): string | null {
+  if (!s) return null;
+  const d = s.replace(/\D/g, "");
+  return d || null;
+}
+
+function jidToPhone(jid: string | null | undefined): string | null {
+  if (!jid) return null;
+  return digitsOnly(String(jid).split("@")[0].split(":")[0]);
+}
+
+function extractText(msg: any): string | null {
+  if (!msg) return null;
+  return (
+    msg?.conversation ??
+    msg?.extendedTextMessage?.text ??
+    msg?.imageMessage?.caption ??
+    msg?.videoMessage?.caption ??
+    msg?.documentMessage?.caption ??
+    msg?.buttonsResponseMessage?.selectedDisplayText ??
+    msg?.listResponseMessage?.title ??
+    null
+  );
+}
+
+function detectContentType(msg: any): string {
+  if (!msg) return "text";
+  if (msg.imageMessage) return "image";
+  if (msg.audioMessage) return "audio";
+  if (msg.videoMessage) return "video";
+  if (msg.documentMessage) return "document";
+  if (msg.stickerMessage) return "sticker";
+  if (msg.locationMessage) return "location";
+  if (msg.contactMessage || msg.contactsArrayMessage) return "contact";
+  return "text";
+}
+
+function extractMedia(msg: any): { mime: string | null; filename: string | null; url: string | null } {
+  const candidate = msg?.imageMessage || msg?.audioMessage || msg?.videoMessage || msg?.documentMessage || msg?.stickerMessage || null;
+  if (!candidate) return { mime: null, filename: null, url: null };
+  return {
+    mime: candidate.mimetype ?? candidate.Mimetype ?? null,
+    filename: candidate.fileName ?? candidate.FileName ?? null,
+    url: candidate.url ?? candidate.URL ?? null,
+  };
+}
+
+function normalizeDbStatus(status: any, fromMe: boolean): string {
+  const s = String(status || "").toLowerCase();
+  if (["pending", "sent", "delivered", "read", "failed"].includes(s)) return s;
+  if (["server_ack", "delivery_ack", "played"].includes(s)) return "delivered";
+  if (["read_ack"].includes(s)) return "read";
+  return fromMe ? "sent" : "delivered";
+}
+
+function safeIsoFromEvolutionTs(ts: unknown): string {
+  const fallback = new Date().toISOString();
+  if (ts == null) return fallback;
+  if (ts instanceof Date) return isNaN(ts.getTime()) ? fallback : ts.toISOString();
+  if (typeof ts === "string") {
+    const trimmed = ts.trim();
+    if (!trimmed) return fallback;
+    // ISO string
+    if (/[^\d.]/.test(trimmed)) {
+      const d = new Date(trimmed);
+      if (!isNaN(d.getTime())) return d.toISOString();
+      return fallback;
+    }
+    const n = Number(trimmed);
+    if (Number.isFinite(n) && n > 0) {
+      const ms = n < 1e12 ? n * 1000 : n;
+      const d = new Date(ms);
+      return isNaN(d.getTime()) ? fallback : d.toISOString();
+    }
+    return fallback;
+  }
+  if (typeof ts === "number" && Number.isFinite(ts) && ts > 0) {
+    const ms = ts < 1e12 ? ts * 1000 : ts;
+    const d = new Date(ms);
+    return isNaN(d.getTime()) ? fallback : d.toISOString();
+  }
+  return fallback;
+}
+
+type ParsedMessage = {
+  remoteJid: string;
+  lidJid?: string;
+  fromMe: boolean;
+  waMsgId: string | null;
+  pushName: string | null;
+  sentAt: string;
+  text: string | null;
+  contentType: string;
+  media: { mime: string | null; filename: string | null; url: string | null };
+  status: string;
+};
+
+function parseV2Message(m: any): ParsedMessage | null {
+  if (!m?.key?.remoteJid) return null;
+  const remoteJid = String(m.key.remoteJid);
+  const fromMe = m.key.fromMe === true;
+  return {
+    remoteJid,
+    fromMe,
+    waMsgId: m.key.id ?? null,
+    pushName: m.pushName ?? null,
+    sentAt: safeIsoFromEvolutionTs(m.messageTimestamp),
+    text: extractText(m.message),
+    contentType: detectContentType(m.message),
+    media: extractMedia(m.message),
+    status: normalizeDbStatus(m?.status ?? m?.update?.status, fromMe),
+  };
+}
+
+function parseGoMessage(event: string, data: any): ParsedMessage | null {
+  const info = data.Info || data.info || {};
+  const message = data.Message || data.message || {};
+  const sender: string = info.Sender || info.sender || info.RemoteJid || "";
+  const rawRemoteJid: string = info.Chat || info.RemoteJid || sender || "";
+  const fromMe: boolean = !!(info.IsFromMe ?? info.isFromMe ?? event === "SendMessage");
+  const altJidCandidates = fromMe
+    ? [info.RecipientAlt, info.RecipientPn, info.ChatAlt, info.recipientAlt, info.recipientPn, info.chatAlt]
+    : [info.SenderAlt, info.SenderPn, info.senderAlt, info.senderPn];
+  const altPhoneJid = altJidCandidates.find((j: any) => typeof j === "string" && j.includes("@s.whatsapp.net")) as string | undefined;
+  const remoteJid = altPhoneJid || rawRemoteJid;
+  if (!remoteJid) return null;
+  const lidJid = rawRemoteJid.includes("@lid") ? rawRemoteJid : (altJidCandidates.find((j: any) => typeof j === "string" && j.includes("@lid")) as string | undefined);
+
+  const timestamp = info.Timestamp || info.timestamp || info.MessageTimestamp || null;
+  const sentAt = safeIsoFromEvolutionTs(timestamp);
+
+  return {
+    remoteJid,
+    lidJid,
+    fromMe,
+    waMsgId: info.ID || info.id || null,
+    pushName: info.PushName || info.pushName || null,
+    sentAt,
+    text: extractText(message),
+    contentType: detectContentType(message),
+    media: extractMedia(message),
+    status: normalizeDbStatus(info.Status || info.status, fromMe),
+  };
+}
+
+async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
+  if (String(msg.remoteJid).endsWith("@g.us")) return;
+  const phone = jidToPhone(msg.remoteJid);
+  if (!phone) return;
+
+  if (msg.waMsgId) {
+    const { data: existing } = await supa
+      .from("wa_messages")
+      .select("id")
+      .eq("wa_message_id", msg.waMsgId)
+      .eq("restaurant_id", instance.restaurant_id)
+      .maybeSingle();
+    if (existing) {
+      await supa.from("wa_messages").update({ status: msg.status }).eq("id", existing.id);
+      return;
+    }
+  }
+
+  const { data: existingContact } = await supa
+    .from("wa_contacts")
+    .select("id, name")
+    .eq("restaurant_id", instance.restaurant_id)
+    .eq("phone_e164", phone)
+    .maybeSingle();
+
+  let contactId = existingContact?.id;
+  if (!contactId) {
+    let linkedCustomerPhone: string | null = null;
+    try {
+      const { data: matchOrder } = await supa
+        .from("orders")
+        .select("customer_phone")
+        .eq("restaurant_id", instance.restaurant_id)
+        .filter("customer_phone", "ilike", `%${phone.slice(-10)}%`)
+        .limit(1)
+        .maybeSingle();
+      if (matchOrder?.customer_phone) linkedCustomerPhone = matchOrder.customer_phone;
+    } catch (_) {}
+    const { data: ins, error: ie } = await supa
+      .from("wa_contacts")
+      .insert({ restaurant_id: instance.restaurant_id, phone_e164: phone, name: msg.pushName, linked_customer_phone: linkedCustomerPhone })
+      .select("id")
+      .single();
+    if (ie) {
+      console.error("[webhook] contact insert", ie);
+      return;
+    }
+    contactId = ins.id;
+  } else if (msg.pushName && !existingContact?.name) {
+    await supa.from("wa_contacts").update({ name: msg.pushName }).eq("id", contactId);
+  }
+
+  const { data: existingConv } = await supa
+    .from("wa_conversations")
+    .select("id")
+    .eq("restaurant_id", instance.restaurant_id)
+    .eq("contact_id", contactId)
+    .eq("instance_id", instance.id)
+    .maybeSingle();
+
+  let convId = existingConv?.id;
+  if (!convId) {
+    const { data: convIns, error: ce } = await supa
+      .from("wa_conversations")
+      .insert({ restaurant_id: instance.restaurant_id, contact_id: contactId, instance_id: instance.id, status: "open" })
+      .select("id")
+      .single();
+    if (ce) {
+      console.error("[webhook] conv insert", ce);
+      return;
+    }
+    convId = convIns.id;
+  }
+
+  await supa.from("wa_messages").insert({
+    restaurant_id: instance.restaurant_id,
+    conversation_id: convId,
+    wa_message_id: msg.waMsgId,
+    direction: msg.fromMe ? "out" : "in",
+    from_me: msg.fromMe,
+    content_type: msg.contentType,
+    text: msg.text,
+    media_mime: msg.media.mime,
+    media_filename: msg.media.filename,
+    media_url: msg.media.url,
+    status: msg.status,
+    sent_at: msg.sentAt,
+  });
+
+  if (!msg.fromMe) {
+    const { data: convRow } = await supa
+      .from("wa_conversations")
+      .select("ai_enabled, assigned_user_id")
+      .eq("id", convId)
+      .maybeSingle();
+    if (convRow?.ai_enabled && !convRow.assigned_user_id) {
+      await supa.from("bot_debounce").upsert(
+        { conversation_id: convId, restaurant_id: instance.restaurant_id, fire_at: new Date(Date.now() + 4000).toISOString() },
+        { onConflict: "conversation_id" },
+      );
+    }
+  }
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const url = new URL(req.url);
+    const token = url.searchParams.get("token");
+    if (!token) return json({ error: "missing token" }, 401);
+
+    const supa = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const { data: instance } = await supa
+      .from("evolution_instances")
+      .select("id, restaurant_id, instance_name, status, phone_number")
+      .eq("webhook_token", token)
+      .maybeSingle();
+
+    if (!instance) return json({ error: "invalid token" }, 401);
+
+    const payload = await req.json().catch(() => ({}));
+    const event = normalizeEvent(payload?.event || payload?.Event || payload?.type || payload?.Type);
+    const data = payload?.data ?? payload?.Data ?? payload;
+    const eventLower = event.toLowerCase().replace(/_/g, ".");
+
+    if (["connection.update", "CONNECTION_UPDATE"].includes(event) || eventLower === "connection.update" || ["Connected", "PairSuccess", "Disconnected", "LoggedOut"].includes(event)) {
+      const rawState = ["Connected", "PairSuccess"].includes(event)
+        ? "open"
+        : ["Disconnected", "LoggedOut"].includes(event)
+          ? "close"
+          : (data?.state || data?.connection || payload?.state);
+      const state = rawState === "open" ? "open" : rawState === "connecting" ? "connecting" : "close";
+      const phone =
+        jidToPhone(data?.wuid) ??
+        jidToPhone(data?.instance?.wuid) ??
+        jidToPhone(data?.owner) ??
+        jidToPhone(data?.JID || data?.jid || data?.number) ??
+        instance.phone_number;
+
+      const status = state === "open" ? "connected" : state === "connecting" ? "waiting_qr" : "disconnected";
+      await supa.from("evolution_instances").update({
+        status,
+        phone_number: status === "connected" ? phone : (status === "disconnected" ? null : instance.phone_number),
+        ...(status === "connected" ? { last_connected_at: new Date().toISOString(), qr_code: null, qr_expires_at: null } : {}),
+        ...(status === "disconnected" ? { qr_code: null, qr_expires_at: null } : {}),
+      }).eq("id", instance.id);
+
+      return json({ ok: true });
+    }
+
+    if (["qrcode.updated", "QRCODE_UPDATED", "QRCode", "QR", "QRCodeUpdated"].includes(event) || eventLower === "qrcode.updated") {
+      const qr = extractQr(data) || extractQr(payload);
+      if (qr) {
+        await supa.from("evolution_instances").update({
+          status: "waiting_qr",
+          qr_code: qr,
+          qr_expires_at: new Date(Date.now() + 660 * 1000).toISOString(),
+        }).eq("id", instance.id);
+      } else {
+        console.warn("[evolution-webhook] QR event sem QR extraível", JSON.stringify(payload).slice(0, 1200));
+      }
+      return json({ ok: true });
+    }
+
+    if (["messages.upsert", "MESSAGES_UPSERT", "messages.update", "send.message"].includes(event) || ["messages.upsert", "messages.update", "send.message"].includes(eventLower)) {
+      const messages = Array.isArray(data?.messages) ? data.messages : [data];
+      for (const raw of messages) {
+        const parsed = parseV2Message(raw);
+        if (parsed) await processMessage(supa, instance, parsed);
+      }
+      return json({ ok: true, processed: messages.length });
+    }
+
+    if (["Message", "SendMessage"].includes(event)) {
+      const parsed = parseGoMessage(event, data);
+      if (parsed) await processMessage(supa, instance, parsed);
+      return json({ ok: true, processed: parsed ? 1 : 0 });
+    }
+
+    return json({ ok: true, ignored: event });
+  } catch (err) {
+    console.error("[evolution-webhook] error:", err);
+    return json({ ok: true });
+  }
+});
