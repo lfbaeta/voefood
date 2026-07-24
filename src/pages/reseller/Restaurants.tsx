@@ -107,7 +107,7 @@ function RestaurantsContent() {
               restaurant={restaurant}
               onView={(id) => navigate(`/reseller/restaurants/${id}`)}
               onEdit={(id) => navigate(`/reseller/restaurants/${id}`)}
-              onManage={(id) => window.open(`${buildRestaurantUrl(restaurant.slug)}/auth`, '_blank')}
+              onManage={(id) => openWithCurrentSession(`${buildRestaurantUrl(restaurant.slug)}/admin`)}
             />
           ))}
         </div>

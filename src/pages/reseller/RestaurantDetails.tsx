@@ -87,7 +87,7 @@ function RestaurantDetailsContent() {
           <ExternalLink className="h-4 w-4 mr-2" />
           Ver Cardápio
         </Button>
-        <Button onClick={() => window.open(`${buildRestaurantUrl(restaurant.slug)}/auth`, '_blank')}>
+        <Button onClick={() => openWithCurrentSession(`${buildRestaurantUrl(restaurant.slug)}/admin`)}>
           <Settings className="h-4 w-4 mr-2" />
           Acessar Painel
         </Button>
