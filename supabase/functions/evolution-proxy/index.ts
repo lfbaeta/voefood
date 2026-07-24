@@ -27,7 +27,10 @@ type EvoFetchResult = {
 };
 
 function normalizeUrl(u: string): string {
-  return u.trim().replace(/\/$/, "");
+  let s = u.trim().replace(/\/+$/, "");
+  // Strip common panel/admin suffixes that users paste by mistake.
+  s = s.replace(/\/(manager|admin|dashboard|api)(\/.*)?$/i, "");
+  return s.replace(/\/+$/, "");
 }
 
 function maskKey(k?: string | null): string {

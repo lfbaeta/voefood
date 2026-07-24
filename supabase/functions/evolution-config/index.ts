@@ -20,7 +20,9 @@ function maskKey(k?: string | null): string {
 }
 
 function normalizeUrl(u: string): string {
-  return u.trim().replace(/\/$/, "");
+  let s = u.trim().replace(/\/+$/, "");
+  s = s.replace(/\/(manager|admin|dashboard|api)(\/.*)?$/i, "");
+  return s.replace(/\/+$/, "");
 }
 
 serve(async (req) => {
