@@ -375,22 +375,65 @@ serve(async (req) => {
 
       const webhookToken = crypto.randomUUID().replace(/-/g, "");
       const generatedToken = crypto.randomUUID();
-      console.log(`[create_instance] -> POST /instance/create name=${safeName} token=${maskKey(generatedToken)}`);
-      const createRes = await evoFetch(cfg, "/instance/create", {
-        method: "POST",
-        body: JSON.stringify({ name: safeName, token: generatedToken }),
-      });
-      console.log(`[create_instance] <- status=${createRes.status} ok=${createRes.ok}`);
 
-      if (!createRes.ok) {
-        return json({ ok: false, error: createRes.message || `Falha ao criar instância (status ${createRes.status})`, response: createRes.body }, 400);
+      // Try Evolution Go first ({name, token}), then Evolution API v2 ({instanceName, token, qrcode, integration}).
+      const createAttempts: Array<{ label: string; body: Record<string, unknown> }> = [
+        { label: "go", body: { name: safeName, token: generatedToken } },
+        {
+          label: "v2",
+          body: {
+            instanceName: safeName,
+            token: generatedToken,
+            qrcode: true,
+            integration: "WHATSAPP-BAILEYS",
+          },
+        },
+      ];
+
+      let createRes: EvoFetchResult | null = null;
+      for (const attempt of createAttempts) {
+        console.log(`[create_instance] -> POST /instance/create variant=${attempt.label} name=${safeName} token=${maskKey(generatedToken)}`);
+        createRes = await evoFetch(cfg, "/instance/create", {
+          method: "POST",
+          body: JSON.stringify(attempt.body),
+        });
+        console.log(`[create_instance] <- variant=${attempt.label} status=${createRes.status} ok=${createRes.ok}`);
+        if (createRes.ok) break;
+        // Only retry with next variant on 400/404/422 (schema/route mismatch).
+        if (![400, 404, 422].includes(createRes.status)) break;
+      }
+
+      if (!createRes || !createRes.ok) {
+        const status = createRes?.status ?? 0;
+        let hint = "";
+        if (status === 404) {
+          hint = " Verifique se a URL do servidor Evolution está correta (sem barra final, sem /manager) e se aponta para uma instalação Evolution Go ou Evolution API v2.";
+        } else if (status === 401 || status === 403) {
+          hint = " Verifique a Global API Key configurada no servidor.";
+        }
+        return json({
+          ok: false,
+          error: (createRes?.message || `Falha ao criar instância (status ${status})`) + hint,
+          response: createRes?.body,
+        }, 400);
       }
 
       const created = createRes.body?.data ?? createRes.body?.instance ?? createRes.body ?? {};
-      const uuid = created?.id ?? created?.instanceId ?? created?.uuid ?? null;
-      const instanceToken = created?.token ?? created?.hash?.apikey ?? created?.apikey ?? generatedToken;
+      const uuid =
+        created?.id ??
+        created?.instanceId ??
+        created?.uuid ??
+        created?.instance?.instanceId ??
+        created?.instance?.id ??
+        null;
+      const instanceToken =
+        created?.token ??
+        created?.hash?.apikey ??
+        created?.apikey ??
+        created?.hash ??
+        generatedToken;
       if (!uuid) {
-        return json({ ok: false, error: "Servidor criou a instância mas não retornou UUID. Verifique a versão do Evolution Go.", response: createRes.body }, 400);
+        return json({ ok: false, error: "Servidor criou a instância mas não retornou UUID. Verifique a versão do Evolution Go/API.", response: createRes.body }, 400);
       }
 
       const { data: inserted, error: insertErr } = await supaAdmin
