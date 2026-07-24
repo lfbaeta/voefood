@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Search, Store, Loader2 } from 'lucide-react';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openWithCurrentSession } from '@/lib/crossDomainAuth';
 import { useResellerRestaurants } from '@/hooks/useReseller';
 import { SubscriptionStatus } from '@/types/reseller';
 import { useDemoGuard } from '@/hooks/useDemoGuard';

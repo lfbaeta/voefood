@@ -36,6 +36,7 @@ import { CommunicationHistory } from '@/components/reseller/CommunicationHistory
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openWithCurrentSession } from '@/lib/crossDomainAuth';
 
 
 function RestaurantDetailsContent() {
