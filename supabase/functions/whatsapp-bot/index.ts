@@ -83,7 +83,11 @@ async function transcribeAudio(mediaUrl: string, mime: string): Promise<string |
 }
 
 function digitsOnly(s: string): string { return (s || "").replace(/\D/g, ""); }
-function normalizeUrl(u: string): string { return u.trim().replace(/\/$/, ""); }
+function normalizeUrl(u: string): string {
+  let s = u.trim().replace(/\/+$/, "");
+  s = s.replace(/\/(manager|admin|dashboard|api)(\/.*)?$/i, "");
+  return s.replace(/\/+$/, "");
+}
 
 // =================== ADDON HELPERS ===================
 async function fetchAddonsForProducts(
@@ -1622,50 +1626,70 @@ async function callAI(
 }
 
 // =================== EVOLUTION SEND ===================
-async function sendWhatsApp(server: string, apiKey: string, _instance: string, number: string, text: string) {
-  const url = `${normalizeUrl(server)}/send/text`;
-  const res = await fetch(url, {
+async function evoPost(server: string, apiKey: string, path: string, bodyPayload: Record<string, any>) {
+  const res = await fetch(`${normalizeUrl(server)}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: apiKey },
-    body: JSON.stringify({ number, text }),
+    body: JSON.stringify(bodyPayload),
   });
   const t = await res.text();
   let body: any = null;
   try { body = t ? JSON.parse(t) : null; } catch { body = t; }
-  if (!res.ok) {
-    console.error(
-      `[whatsapp-bot] evolution send failed status=${res.status} body=${
-        typeof body === "string" ? body.slice(0, 500) : JSON.stringify(body).slice(0, 500)
-      }`,
-    );
+  return { ok: res.ok, status: res.status, body, path };
+}
+
+function bodyPreview(body: any): string {
+  return typeof body === "string" ? body.slice(0, 500) : JSON.stringify(body).slice(0, 500);
+}
+
+async function sendWhatsApp(server: string, apiKey: string, instance: string, number: string, text: string) {
+  const attempts = [
+    { path: `/message/sendText/${encodeURIComponent(instance)}`, body: { number, text } },
+    { path: "/send/text", body: { number, text } },
+  ];
+
+  let last: Awaited<ReturnType<typeof evoPost>> | null = null;
+  for (const attempt of attempts) {
+    const result = await evoPost(server, apiKey, attempt.path, attempt.body);
+    if (result.ok) return result;
+    last = result;
   }
-  return { ok: res.ok, status: res.status, body };
+
+  if (last) {
+    console.error(`[whatsapp-bot] evolution send failed path=${last.path} status=${last.status} body=${bodyPreview(last.body)}`);
+    return last;
+  }
+  return { ok: false, status: 0, body: { error: "send_failed" }, path: "" };
 }
 
 async function sendWhatsAppImage(
   server: string,
   apiKey: string,
+  instance: string,
   number: string,
   imageUrl: string,
   caption: string,
 ) {
-  const url = `${normalizeUrl(server)}/send/image`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: apiKey },
-    body: JSON.stringify({ number, image: imageUrl, caption }),
-  });
-  const t = await res.text();
-  let body: any = null;
-  try { body = t ? JSON.parse(t) : null; } catch { body = t; }
-  if (!res.ok) {
-    console.error(
-      `[whatsapp-bot] evolution sendImage failed status=${res.status} body=${
-        typeof body === "string" ? body.slice(0, 500) : JSON.stringify(body).slice(0, 500)
-      }`,
-    );
+  const attempts = [
+    {
+      path: `/message/sendMedia/${encodeURIComponent(instance)}`,
+      body: { number, mediatype: "image", media: imageUrl, caption, fileName: "produto.jpg" },
+    },
+    { path: "/send/image", body: { number, image: imageUrl, caption } },
+  ];
+
+  let last: Awaited<ReturnType<typeof evoPost>> | null = null;
+  for (const attempt of attempts) {
+    const result = await evoPost(server, apiKey, attempt.path, attempt.body);
+    if (result.ok) return result;
+    last = result;
   }
-  return { ok: res.ok, status: res.status, body };
+
+  if (last) {
+    console.error(`[whatsapp-bot] evolution sendImage failed path=${last.path} status=${last.status} body=${bodyPreview(last.body)}`);
+    return last;
+  }
+  return { ok: false, status: 0, body: { error: "send_image_failed" }, path: "" };
 }
 
 // =================== MAIN ===================
