@@ -1,0 +1,1 @@
+update public.evolution_instances set status='connected', last_connected_at=now(), qr_code=null, qr_expires_at=null where status <> 'connected' and id in (select instance_id from public.wa_conversations where instance_id is not null);

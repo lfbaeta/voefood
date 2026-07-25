@@ -239,6 +239,17 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
   const phone = jidToPhone(msg.remoteJid);
   if (!phone) return;
 
+  // Auto-heal: se mensagens estão chegando, a instância está de fato conectada.
+  if (instance.status !== "connected") {
+    await supa.from("evolution_instances").update({
+      status: "connected",
+      last_connected_at: new Date().toISOString(),
+      qr_code: null,
+      qr_expires_at: null,
+    }).eq("id", instance.id);
+    instance.status = "connected";
+  }
+
   if (msg.waMsgId) {
     const { data: existing } = await supa
       .from("wa_messages")
