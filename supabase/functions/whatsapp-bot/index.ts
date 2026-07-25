@@ -1877,7 +1877,9 @@ serve(async (req) => {
     }
 
     const latestInbound = [...ordered].reverse().find((m: any) => m.direction === "in" && m.text?.trim());
-    const latestOutbound = [...ordered].reverse().find((m: any) => m.direction === "out" && m.status !== "failed");
+    const latestOutbound = [...ordered].reverse().find((m: any) =>
+      m.direction === "out" && ["sent", "delivered", "read"].includes(String(m.status || ""))
+    );
     if (!latestInbound?.id) return json({ ok: true, skipped: "no_inbound_message" });
     if (latestOutbound?.created_at && new Date(latestOutbound.created_at) > new Date(latestInbound.created_at)) {
       return json({ ok: true, skipped: "already_replied" });
@@ -1951,7 +1953,11 @@ serve(async (req) => {
     const messages: any[] = [
       { role: "system", content: systemPrompt },
       ...ordered
-        .filter((m) => m.text && m.text.trim().length > 0 && !(m.direction === "out" && m.status === "failed"))
+        .filter((m) =>
+          m.text &&
+          m.text.trim().length > 0 &&
+          !(m.direction === "out" && !["sent", "delivered", "read"].includes(String(m.status || "")))
+        )
         .map((m) => ({
           role: m.direction === "in" ? "user" : "assistant",
           content: m.direction === "out" ? hardenReplyText(m.text) : String(m.text).trim().slice(0, 1200),
