@@ -1858,7 +1858,7 @@ serve(async (req) => {
     // Load history
     const { data: history } = await supa
       .from("wa_messages")
-      .select("id, direction, text, content_type, created_at, media_url, media_mime")
+      .select("id, direction, text, content_type, status, created_at, media_url, media_mime")
       .eq("conversation_id", conv.id)
       .order("created_at", { ascending: false })
       .limit(HISTORY_LIMIT);
@@ -1877,7 +1877,7 @@ serve(async (req) => {
     }
 
     const latestInbound = [...ordered].reverse().find((m: any) => m.direction === "in" && m.text?.trim());
-    const latestOutbound = [...ordered].reverse().find((m: any) => m.direction === "out");
+    const latestOutbound = [...ordered].reverse().find((m: any) => m.direction === "out" && m.status !== "failed");
     if (!latestInbound?.id) return json({ ok: true, skipped: "no_inbound_message" });
     if (latestOutbound?.created_at && new Date(latestOutbound.created_at) > new Date(latestInbound.created_at)) {
       return json({ ok: true, skipped: "already_replied" });
@@ -1927,9 +1927,15 @@ serve(async (req) => {
       restaurant_id: conv.restaurant_id,
     });
     if (claimError) {
-      if (claimError.code === "23505") return json({ ok: true, skipped: "duplicate_claim" });
-      console.error("[whatsapp-bot] claim failed", claimError);
-      return json({ ok: false, error: "claim_failed" });
+      if (claimError.code === "23505" && latestOutbound?.created_at && new Date(latestOutbound.created_at) > new Date(latestInbound.created_at)) {
+        return json({ ok: true, skipped: "duplicate_claim" });
+      }
+      if (claimError.code === "23505") {
+        console.warn("[whatsapp-bot] retrying previously claimed inbound with no successful outbound", latestInbound.id);
+      } else {
+        console.error("[whatsapp-bot] claim failed", claimError);
+        return json({ ok: false, error: "claim_failed" });
+      }
     }
 
     // Customer memory + session detection
