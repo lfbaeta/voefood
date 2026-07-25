@@ -1056,7 +1056,7 @@ async function execTool(
         const caption = (i === 0 && args?.caption && String(args.caption).slice(0, 300)) ||
           `${p.name} — R$ ${Number(p.price).toFixed(2)}`;
         if (i > 0) await sleep(500);
-        const sent = await sendWhatsAppImage(ctx.evo_server, ctx.evo_api_key, number, p.image_url, caption);
+        const sent = await sendWhatsAppImage(ctx.evo_server, ctx.evo_api_key, ctx.evo_instance, number, p.image_url, caption);
         if (!sent.ok) { sentList.push({ id: p.id, nome: p.name, enviado: false }); continue; }
         const waId = sent.body?.key?.id ?? sent.body?.messageId ?? null;
         await supa.from("wa_messages").insert({
