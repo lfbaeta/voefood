@@ -1951,7 +1951,7 @@ serve(async (req) => {
     const messages: any[] = [
       { role: "system", content: systemPrompt },
       ...ordered
-        .filter((m) => m.text && m.text.trim().length > 0)
+        .filter((m) => m.text && m.text.trim().length > 0 && !(m.direction === "out" && m.status === "failed"))
         .map((m) => ({
           role: m.direction === "in" ? "user" : "assistant",
           content: m.direction === "out" ? hardenReplyText(m.text) : String(m.text).trim().slice(0, 1200),
