@@ -21,13 +21,13 @@ function triggerBotAfterDebounce(conversationId: string) {
 
   const task = (async () => {
     await sleep(4500);
-    const res = await fetch(`${supabaseUrl}/functions/v1/whatsapp-bot`, {
+    const res = await fetch(`${supabaseUrl}/functions/v1/bot-debounce-tick`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${serviceRole}`,
       },
-      body: JSON.stringify({ conversation_id: conversationId }),
+      body: JSON.stringify({ source: "evolution-webhook", conversation_id: conversationId }),
     });
     if (!res.ok) {
       console.error("[evolution-webhook] deferred bot trigger failed", res.status, (await res.text()).slice(0, 500));
