@@ -70,18 +70,19 @@ export function LandingPageSettings({ reseller, onUpdate }: LandingPageSettingsP
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${reseller.id}-landing-logo.${fileExt}`;
+      const fileName = `${reseller.id}-landing-logo-${Date.now()}.${fileExt}`;
       const filePath = `landing-logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('public')
+        .from('store-assets')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('public')
+        .from('store-assets')
         .getPublicUrl(filePath);
+
 
       setFormData({ ...formData, landing_page_logo: publicUrl });
       
