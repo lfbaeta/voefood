@@ -83,7 +83,11 @@ async function transcribeAudio(mediaUrl: string, mime: string): Promise<string |
 }
 
 function digitsOnly(s: string): string { return (s || "").replace(/\D/g, ""); }
-function normalizeUrl(u: string): string { return u.trim().replace(/\/$/, ""); }
+function normalizeUrl(u: string): string {
+  let s = u.trim().replace(/\/+$/, "");
+  s = s.replace(/\/(manager|admin|dashboard|api)(\/.*)?$/i, "");
+  return s.replace(/\/+$/, "");
+}
 
 // =================== ADDON HELPERS ===================
 async function fetchAddonsForProducts(
@@ -1052,7 +1056,7 @@ async function execTool(
         const caption = (i === 0 && args?.caption && String(args.caption).slice(0, 300)) ||
           `${p.name} — R$ ${Number(p.price).toFixed(2)}`;
         if (i > 0) await sleep(500);
-        const sent = await sendWhatsAppImage(ctx.evo_server, ctx.evo_api_key, number, p.image_url, caption);
+        const sent = await sendWhatsAppImage(ctx.evo_server, ctx.evo_api_key, ctx.evo_instance, number, p.image_url, caption);
         if (!sent.ok) { sentList.push({ id: p.id, nome: p.name, enviado: false }); continue; }
         const waId = sent.body?.key?.id ?? sent.body?.messageId ?? null;
         await supa.from("wa_messages").insert({
@@ -1622,50 +1626,70 @@ async function callAI(
 }
 
 // =================== EVOLUTION SEND ===================
-async function sendWhatsApp(server: string, apiKey: string, _instance: string, number: string, text: string) {
-  const url = `${normalizeUrl(server)}/send/text`;
-  const res = await fetch(url, {
+async function evoPost(server: string, apiKey: string, path: string, bodyPayload: Record<string, any>) {
+  const res = await fetch(`${normalizeUrl(server)}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: apiKey },
-    body: JSON.stringify({ number, text }),
+    body: JSON.stringify(bodyPayload),
   });
   const t = await res.text();
   let body: any = null;
   try { body = t ? JSON.parse(t) : null; } catch { body = t; }
-  if (!res.ok) {
-    console.error(
-      `[whatsapp-bot] evolution send failed status=${res.status} body=${
-        typeof body === "string" ? body.slice(0, 500) : JSON.stringify(body).slice(0, 500)
-      }`,
-    );
+  return { ok: res.ok, status: res.status, body, path };
+}
+
+function bodyPreview(body: any): string {
+  return typeof body === "string" ? body.slice(0, 500) : JSON.stringify(body).slice(0, 500);
+}
+
+async function sendWhatsApp(server: string, apiKey: string, instance: string, number: string, text: string) {
+  const attempts = [
+    { path: `/message/sendText/${encodeURIComponent(instance)}`, body: { number, text } },
+    { path: "/send/text", body: { number, text } },
+  ];
+
+  let last: Awaited<ReturnType<typeof evoPost>> | null = null;
+  for (const attempt of attempts) {
+    const result = await evoPost(server, apiKey, attempt.path, attempt.body);
+    if (result.ok) return result;
+    last = result;
   }
-  return { ok: res.ok, status: res.status, body };
+
+  if (last) {
+    console.error(`[whatsapp-bot] evolution send failed path=${last.path} status=${last.status} body=${bodyPreview(last.body)}`);
+    return last;
+  }
+  return { ok: false, status: 0, body: { error: "send_failed" }, path: "" };
 }
 
 async function sendWhatsAppImage(
   server: string,
   apiKey: string,
+  instance: string,
   number: string,
   imageUrl: string,
   caption: string,
 ) {
-  const url = `${normalizeUrl(server)}/send/image`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: apiKey },
-    body: JSON.stringify({ number, image: imageUrl, caption }),
-  });
-  const t = await res.text();
-  let body: any = null;
-  try { body = t ? JSON.parse(t) : null; } catch { body = t; }
-  if (!res.ok) {
-    console.error(
-      `[whatsapp-bot] evolution sendImage failed status=${res.status} body=${
-        typeof body === "string" ? body.slice(0, 500) : JSON.stringify(body).slice(0, 500)
-      }`,
-    );
+  const attempts = [
+    {
+      path: `/message/sendMedia/${encodeURIComponent(instance)}`,
+      body: { number, mediatype: "image", media: imageUrl, caption, fileName: "produto.jpg" },
+    },
+    { path: "/send/image", body: { number, image: imageUrl, caption } },
+  ];
+
+  let last: Awaited<ReturnType<typeof evoPost>> | null = null;
+  for (const attempt of attempts) {
+    const result = await evoPost(server, apiKey, attempt.path, attempt.body);
+    if (result.ok) return result;
+    last = result;
   }
-  return { ok: res.ok, status: res.status, body };
+
+  if (last) {
+    console.error(`[whatsapp-bot] evolution sendImage failed path=${last.path} status=${last.status} body=${bodyPreview(last.body)}`);
+    return last;
+  }
+  return { ok: false, status: 0, body: { error: "send_image_failed" }, path: "" };
 }
 
 // =================== MAIN ===================
@@ -1834,7 +1858,7 @@ serve(async (req) => {
     // Load history
     const { data: history } = await supa
       .from("wa_messages")
-      .select("id, direction, text, content_type, created_at, media_url, media_mime")
+      .select("id, direction, text, content_type, status, created_at, media_url, media_mime")
       .eq("conversation_id", conv.id)
       .order("created_at", { ascending: false })
       .limit(HISTORY_LIMIT);
@@ -1853,7 +1877,7 @@ serve(async (req) => {
     }
 
     const latestInbound = [...ordered].reverse().find((m: any) => m.direction === "in" && m.text?.trim());
-    const latestOutbound = [...ordered].reverse().find((m: any) => m.direction === "out");
+    const latestOutbound = [...ordered].reverse().find((m: any) => m.direction === "out" && m.status !== "failed");
     if (!latestInbound?.id) return json({ ok: true, skipped: "no_inbound_message" });
     if (latestOutbound?.created_at && new Date(latestOutbound.created_at) > new Date(latestInbound.created_at)) {
       return json({ ok: true, skipped: "already_replied" });
@@ -1903,9 +1927,15 @@ serve(async (req) => {
       restaurant_id: conv.restaurant_id,
     });
     if (claimError) {
-      if (claimError.code === "23505") return json({ ok: true, skipped: "duplicate_claim" });
-      console.error("[whatsapp-bot] claim failed", claimError);
-      return json({ ok: false, error: "claim_failed" });
+      if (claimError.code === "23505" && latestOutbound?.created_at && new Date(latestOutbound.created_at) > new Date(latestInbound.created_at)) {
+        return json({ ok: true, skipped: "duplicate_claim" });
+      }
+      if (claimError.code === "23505") {
+        console.warn("[whatsapp-bot] retrying previously claimed inbound with no successful outbound", latestInbound.id);
+      } else {
+        console.error("[whatsapp-bot] claim failed", claimError);
+        return json({ ok: false, error: "claim_failed" });
+      }
     }
 
     // Customer memory + session detection
@@ -1921,7 +1951,7 @@ serve(async (req) => {
     const messages: any[] = [
       { role: "system", content: systemPrompt },
       ...ordered
-        .filter((m) => m.text && m.text.trim().length > 0)
+        .filter((m) => m.text && m.text.trim().length > 0 && !(m.direction === "out" && m.status === "failed"))
         .map((m) => ({
           role: m.direction === "in" ? "user" : "assistant",
           content: m.direction === "out" ? hardenReplyText(m.text) : String(m.text).trim().slice(0, 1200),

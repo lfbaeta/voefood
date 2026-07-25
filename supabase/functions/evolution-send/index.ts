@@ -14,7 +14,9 @@ const json = (body: unknown, status = 200) =>
   });
 
 function normalizeUrl(u: string): string {
-  return u.trim().replace(/\/$/, "");
+  let s = u.trim().replace(/\/+$/, "");
+  s = s.replace(/\/(manager|admin|dashboard|api)(\/.*)?$/i, "");
+  return s.replace(/\/+$/, "");
 }
 
 function digitsOnly(s: string): string {
@@ -43,6 +45,16 @@ async function evoFetch(url: string, apiKey: string, path: string, body: any) {
     );
   }
   return { ok: res.ok, status: res.status, body: parsed };
+}
+
+async function evoFetchFirst(url: string, apiKey: string, attempts: Array<{ path: string; body: any }>) {
+  let last: Awaited<ReturnType<typeof evoFetch>> | null = null;
+  for (const attempt of attempts) {
+    const result = await evoFetch(url, apiKey, attempt.path, attempt.body);
+    if (result.ok) return result;
+    last = result;
+  }
+  return last ?? { ok: false, status: 0, body: { error: "Falha ao enviar" } };
 }
 
 async function authorizeRestaurant(supaAdmin: any, userId: string, restaurantId: string): Promise<boolean> {
@@ -80,11 +92,14 @@ async function loadConfig(supaAdmin: any, resellerId: string) {
   return { url: normalizeUrl(cfg.server_url), globalKey: cfg.global_api_key };
 }
 
-async function sendByType(url: string, apiKey: string, type: string, to: string, payload: Record<string, any>) {
+async function sendByType(url: string, apiKey: string, instanceName: string, type: string, to: string, payload: Record<string, any>) {
   const phone = digitsOnly(to);
   switch (type) {
     case "text":
-      return evoFetch(url, apiKey, "/send/text", { number: phone, text: payload.text });
+      return evoFetchFirst(url, apiKey, [
+        { path: `/message/sendText/${encodeURIComponent(instanceName)}`, body: { number: phone, text: payload.text } },
+        { path: "/send/text", body: { number: phone, text: payload.text } },
+      ]);
     case "media": {
       const rawMedia = payload.url ?? payload.media;
       const mediaType = payload.type || payload.mediatype || "image";
@@ -98,7 +113,10 @@ async function sendByType(url: string, apiKey: string, type: string, to: string,
       if (isDataUrl) mediaPayload.media = rawMedia;
       else mediaPayload.url = rawMedia;
       if (payload.mimetype) mediaPayload.mimetype = payload.mimetype;
-      return evoFetch(url, apiKey, "/send/media", mediaPayload);
+      return evoFetchFirst(url, apiKey, [
+        { path: `/message/sendMedia/${encodeURIComponent(instanceName)}`, body: { ...mediaPayload, mediatype: mediaType, media: rawMedia } },
+        { path: "/send/media", body: mediaPayload },
+      ]);
     }
     case "audio": {
       const audioUrl = payload.audio || payload.url || payload.media;
@@ -111,7 +129,10 @@ async function sendByType(url: string, apiKey: string, type: string, to: string,
       };
       if (isDataUrl) audioPayload.media = audioUrl;
       else audioPayload.url = audioUrl;
-      return evoFetch(url, apiKey, "/send/media", audioPayload);
+      return evoFetchFirst(url, apiKey, [
+        { path: `/message/sendWhatsAppAudio/${encodeURIComponent(instanceName)}`, body: { number: phone, audio: audioUrl } },
+        { path: "/send/media", body: audioPayload },
+      ]);
     }
     case "sticker":
       return evoFetch(url, apiKey, "/send/sticker", { number: phone, sticker: payload.sticker });
@@ -199,7 +220,7 @@ serve(async (req) => {
 
       const cfg = await loadConfig(supaAdmin, inst.reseller_id);
       if (!cfg) return json({ error: "Servidor Evolution não configurado" }, 400);
-      const resp = await sendByType(cfg.url, inst.instance_token || cfg.globalKey, type, to, bodyPayload);
+      const resp = await sendByType(cfg.url, inst.instance_token || cfg.globalKey, inst.instance_name, type, to, bodyPayload);
       return json(resp, resp.ok ? 200 : resp.status >= 400 ? resp.status : 502);
     }
 
@@ -278,7 +299,7 @@ serve(async (req) => {
         conversationId = newConv.id;
       }
 
-      const resp = await sendByType(cfg.url, inst.instance_token || cfg.globalKey, "text", phone, { text });
+      const resp = await sendByType(cfg.url, inst.instance_token || cfg.globalKey, inst.instance_name, "text", phone, { text });
       if (!resp.ok) return json({ error: resp.body?.message || resp.body?.error || "Falha ao enviar", response: resp.body }, 400);
       const waId = resp.body?.key?.id ?? resp.body?.messageId ?? null;
       await supaAdmin.from("wa_messages").insert({
@@ -323,7 +344,7 @@ serve(async (req) => {
       const text: string = (payload?.text ?? "").toString().trim();
       if (!text) return json({ error: "text required" }, 400);
       if (text.length > 4096) return json({ error: "text too long" }, 400);
-      const resp = await sendByType(cfg.url, apiKey, "text", number, { text });
+      const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "text", number, { text });
       if (!resp.ok) return json({ error: resp.body?.message || resp.body?.error || "Falha ao enviar", response: resp.body }, 400);
       const waId = resp.body?.key?.id ?? resp.body?.messageId ?? null;
       const { data: inserted } = await supaAdmin.from("wa_messages").insert({
@@ -353,7 +374,7 @@ serve(async (req) => {
         .createSignedUrl(media_path, 60 * 60 * 24 * 7); // 7d — Meta fetches immediately
       if (signErr || !signed?.signedUrl) return json({ error: "failed to sign media" }, 500);
       const mediaUrl = signed.signedUrl;
-      const resp = await sendByType(cfg.url, apiKey, kind === "audio" ? "audio" : "media", number, {
+      const resp = await sendByType(cfg.url, apiKey, inst.instance_name, kind === "audio" ? "audio" : "media", number, {
         type: kind,
         url: mediaUrl,
         caption,
@@ -391,7 +412,7 @@ serve(async (req) => {
         .eq("restaurant_id", conv.restaurant_id)
         .maybeSingle();
       if (!msg?.wa_message_id) return json({ error: "Mensagem sem id externo" }, 400);
-      const resp = await sendByType(cfg.url, apiKey, "reaction", number, {
+      const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "reaction", number, {
         key: { remoteJid: `${number}@s.whatsapp.net`, fromMe: msg.from_me, id: msg.wa_message_id },
         reaction: emoji,
       });
@@ -401,7 +422,7 @@ serve(async (req) => {
 
     if (action === "set_presence") {
       const presence: string = payload?.presence || "composing";
-      const resp = await sendByType(cfg.url, apiKey, "presence", number, { presence });
+      const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "presence", number, { presence });
       return json({ ok: resp.ok });
     }
 

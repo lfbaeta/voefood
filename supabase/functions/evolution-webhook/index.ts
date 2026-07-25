@@ -12,6 +12,32 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function triggerBotAfterDebounce(conversationId: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRole) return;
+
+  const task = (async () => {
+    await sleep(4500);
+    const res = await fetch(`${supabaseUrl}/functions/v1/bot-debounce-tick`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRole}`,
+      },
+      body: JSON.stringify({ source: "evolution-webhook", conversation_id: conversationId }),
+    });
+    if (!res.ok) {
+      console.error("[evolution-webhook] deferred bot trigger failed", res.status, (await res.text()).slice(0, 500));
+    }
+  })().catch((err) => console.error("[evolution-webhook] deferred bot trigger error", err));
+
+  const edgeRuntime = (globalThis as any).EdgeRuntime;
+  if (edgeRuntime?.waitUntil) edgeRuntime.waitUntil(task);
+}
+
 function normalizeEvent(name: string | undefined): string {
   return (name || "").trim();
 }
@@ -304,10 +330,15 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
       .eq("id", convId)
       .maybeSingle();
     if (convRow?.ai_enabled && !convRow.assigned_user_id) {
-      await supa.from("bot_debounce").upsert(
+      const { error: debounceError } = await supa.from("bot_debounce").upsert(
         { conversation_id: convId, restaurant_id: instance.restaurant_id, fire_at: new Date(Date.now() + 4000).toISOString() },
         { onConflict: "conversation_id" },
       );
+      if (debounceError) {
+        console.error("[evolution-webhook] bot debounce upsert", debounceError);
+      } else {
+        triggerBotAfterDebounce(convId);
+      }
     }
   }
 }
