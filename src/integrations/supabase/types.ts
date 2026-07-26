@@ -4887,24 +4887,41 @@ export type Database = {
       }
       restaurants_public: {
         Row: {
+          business_subtype: string | null
+          capabilities_override: Json | null
           id: string | null
           is_active: boolean | null
           name: string | null
+          plan_id: string | null
           slug: string | null
         }
         Insert: {
+          business_subtype?: string | null
+          capabilities_override?: Json | null
           id?: string | null
           is_active?: boolean | null
           name?: string | null
+          plan_id?: string | null
           slug?: string | null
         }
         Update: {
+          business_subtype?: string | null
+          capabilities_override?: Json | null
           id?: string | null
           is_active?: boolean | null
           name?: string | null
+          plan_id?: string | null
           slug?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "restaurants_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       store_config_public: {
         Row: {
