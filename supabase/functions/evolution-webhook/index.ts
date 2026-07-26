@@ -98,7 +98,9 @@ function digitsOnly(s: string | null | undefined): string | null {
 
 function jidToPhone(jid: string | null | undefined): string | null {
   if (!jid) return null;
-  return digitsOnly(String(jid).split("@")[0].split(":")[0]);
+  const raw = String(jid);
+  if (raw.includes("@lid") || raw.includes("@g.us")) return null;
+  return digitsOnly(raw.split("@")[0].split(":")[0]);
 }
 
 function normalizePhoneJid(value: any): string | null {
