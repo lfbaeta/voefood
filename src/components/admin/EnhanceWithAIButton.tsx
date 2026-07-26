@@ -61,7 +61,8 @@ export function EnhanceWithAIButton({ imageUrl, onEnhanced, disabled }: EnhanceW
       const res = await fetch(afterUrl);
       if (!res.ok) throw new Error('Falha ao baixar imagem melhorada');
       const blob = await res.blob();
-      const filename = `enhanced-${Date.now()}.png`;
+      if (!restaurantId) throw new Error('Estabelecimento não identificado para o upload.');
+      const filename = `${restaurantId}/enhanced-${Date.now()}.png`;
       const { error: upErr } = await supabase.storage
         .from('product-images')
         .upload(filename, blob, { contentType: 'image/png', upsert: false });
