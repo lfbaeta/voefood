@@ -224,7 +224,10 @@ export default function WhatsAppHealth() {
                   <p className="text-xs text-muted-foreground">{health.sending.attempts_24h} tentativas · {health.sending.failures_24h} falhas</p>
                   <p className="text-xs text-muted-foreground">Último sucesso: {fmt(health.sending.last_success_at)}</p>
                   {health.sending.last_failure && (
-                    <p className="text-xs text-destructive">{health.sending.last_failure.error}</p>
+                    <p className={`text-xs ${health.sending.healthy === false ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {health.sending.healthy === false ? 'Última falha: ' : 'Última pendência: '}
+                      {health.sending.last_failure.error}
+                    </p>
                   )}
                 </CardContent>
               </Card>
