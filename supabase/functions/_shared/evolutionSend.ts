@@ -347,8 +347,10 @@ export async function sendEvolutionText(
       { label: "v2-sendMessage", path: `/message/sendMessage/${instance}`, body: { number, text }, preferredKey: "global" as const },
       { label: "go-send-text", path: "/send/text", body: { number, text }, preferredKey: "instance" as const },
     ];
+    let queuedOnlyForTarget = false;
 
     for (const endpoint of endpoints) {
+      if (queuedOnlyForTarget) break;
       const keys = keyCandidates(cfg, endpoint.preferredKey);
       if (!keys.length) {
         last = { ok: false, status: 401, body: { error: "API key da Evolution ausente." }, path: endpoint.path, endpoint: endpoint.label, keySource: "none", attempts: allAttempts };
@@ -368,6 +370,7 @@ export async function sendEvolutionText(
           if (result.ok && !queuedOnly) return result;
           if (queuedOnly) {
             console.warn(`[evolution-send] ${endpoint.label} target=${number} returned PENDING only; trying next fallback before reporting success.`);
+            queuedOnlyForTarget = true;
             break;
           }
           if (!isTransient(result.status) || retry === 3) break;
