@@ -1,0 +1,1 @@
+UPDATE public.wa_messages SET status = 'sent' WHERE direction = 'out' AND status = 'pending' AND wa_message_id IS NOT NULL;
