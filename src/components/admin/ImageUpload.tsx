@@ -25,6 +25,7 @@ export function ImageUpload({
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl || null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { restaurantId } = useEffectiveRestaurantId();
 
   // Sync previewUrl with currentUrl prop changes
   useEffect(() => {
