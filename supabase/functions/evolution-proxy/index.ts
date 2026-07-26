@@ -166,8 +166,8 @@ async function configureWebhook(
     "SEND_MESSAGE",
     "CONNECTION_UPDATE",
     "QRCODE_UPDATED",
-    "CONTACTS_UPSERT",
   ];
+
   const goEvents = ["Message", "SendMessage", "Connected", "Disconnected", "QR", "PairSuccess", "LoggedOut"];
 
   const attempts: Array<{ label: string; path: string; init: RequestInit }> = [];
