@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   chooseEvolutionTarget,
+  chooseEvolutionTargets,
   extractEvolutionMessageId,
   formatEvolutionError,
   normalizeEvolutionTarget,
@@ -890,6 +891,10 @@ async function execTool(
     evo_server: string;
     evo_api_key: string;
     evo_instance: string;
+    evo_global_api_key?: string | null;
+    evo_instance_token?: string | null;
+    evo_instance_uuid?: string | null;
+    send_target?: string | string[];
   },
 ): Promise<{ success: boolean; output: any; error?: string }> {
   try {
@@ -1078,7 +1083,7 @@ async function execTool(
 
       const sentList: any[] = [];
       const semFoto: any[] = [];
-      const number = normalizeEvolutionTarget(ctx.send_target ?? ctx.customer_phone);
+      const number = Array.isArray(ctx.send_target) ? ctx.send_target.map(normalizeEvolutionTarget).find(Boolean) ?? normalizeEvolutionTarget(ctx.customer_phone) : normalizeEvolutionTarget(ctx.send_target ?? ctx.customer_phone);
       for (let i = 0; i < prods.length; i++) {
         const p = prods[i];
         if (!p.image_url) { semFoto.push({ id: p.id, nome: p.name }); continue; }
@@ -1115,8 +1120,12 @@ async function execTool(
       const msg = (args?.message && String(args.message).slice(0, 300)) ||
         "Aqui está nosso cardápio completo 👇";
       const text = `${msg}\n${url}`;
-      const number = normalizeEvolutionTarget(ctx.send_target ?? ctx.customer_phone);
-      const sent = await sendWhatsApp(ctx.evo_server, ctx.evo_api_key, ctx.evo_instance, number, text);
+      const number = ctx.send_target ?? ctx.customer_phone;
+      const sent = await sendWhatsApp(ctx.evo_server, ctx.evo_api_key, ctx.evo_instance, number, text, {
+        globalApiKey: ctx.evo_global_api_key,
+        instanceToken: ctx.evo_instance_token,
+        instanceUuid: ctx.evo_instance_uuid,
+      });
       if (!sent.ok) return { success: false, output: null, error: `Falha ao enviar link (status ${sent.status})` };
 
       const waId = extractEvolutionMessageId(sent.body);
@@ -1158,8 +1167,12 @@ async function execTool(
       const msg = (args?.message && String(args.message).slice(0, 300)) ||
         `Olha o ${prod.name} aqui 👇`;
       const text = `${msg}\n${url}`;
-      const number = normalizeEvolutionTarget(ctx.send_target ?? ctx.customer_phone);
-      const sent = await sendWhatsApp(ctx.evo_server, ctx.evo_api_key, ctx.evo_instance, number, text);
+      const number = ctx.send_target ?? ctx.customer_phone;
+      const sent = await sendWhatsApp(ctx.evo_server, ctx.evo_api_key, ctx.evo_instance, number, text, {
+        globalApiKey: ctx.evo_global_api_key,
+        instanceToken: ctx.evo_instance_token,
+        instanceUuid: ctx.evo_instance_uuid,
+      });
       if (!sent.ok) return { success: false, output: null, error: `Falha ao enviar link (status ${sent.status})` };
       const waId = extractEvolutionMessageId(sent.body);
       await supa.from("wa_messages").insert({
@@ -1679,7 +1692,7 @@ async function sendWhatsApp(
   server: string,
   apiKey: string,
   instance: string,
-  number: string,
+  number: string | string[],
   text: string,
   options: { globalApiKey?: string | null; instanceToken?: string | null; instanceUuid?: string | null; debug?: boolean } = {},
 ) {
@@ -1832,7 +1845,7 @@ serve(async (req) => {
     if (!contact?.phone_e164) return skipped("no_contact");
     // O LID fica salvo só para reconhecer mensagens recebidas. No envio, o
     // Evolution/Baileys é mais confiável usando o telefone normalizado.
-    const sendTarget = chooseEvolutionTarget(contact.phone_e164, contact.wa_lid);
+    const sendTarget = chooseEvolutionTargets(contact.phone_e164, contact.wa_lid);
 
     const { data: inst } = await supa
       .from("evolution_instances")
