@@ -39,8 +39,19 @@ serve(async (req) => {
           },
           body: JSON.stringify({ conversation_id: it.conversation_id }),
         });
-        // Drain body to free resources
-        await res.text();
+        const text = await res.text();
+        if (!res.ok) {
+          console.error("[debounce-tick] whatsapp-bot failed", it.conversation_id, res.status, text.slice(0, 800));
+        } else {
+          try {
+            const body = text ? JSON.parse(text) : null;
+            if (body?.skipped || body?.sent === false || body?.error) {
+              console.warn("[debounce-tick] whatsapp-bot result", it.conversation_id, JSON.stringify(body).slice(0, 800));
+            }
+          } catch {
+            if (text) console.warn("[debounce-tick] whatsapp-bot non-json result", it.conversation_id, text.slice(0, 800));
+          }
+        }
         processed++;
       } catch (e) {
         console.error("[debounce-tick] invoke fail", it.conversation_id, e);
