@@ -1823,10 +1823,9 @@ serve(async (req) => {
       .eq("id", conv.contact_id)
       .maybeSingle();
     if (!contact?.phone_e164) return skipped("no_contact");
-    // Contas migradas para LID só recebem no endereço "<id>@lid".
-    const sendTarget = contact.wa_lid && String(contact.wa_lid).includes("@lid")
-      ? String(contact.wa_lid)
-      : digitsOnly(contact.phone_e164);
+    // O LID fica salvo só para reconhecer mensagens recebidas. No envio, o
+    // Evolution/Baileys é mais confiável usando o telefone normalizado.
+    const sendTarget = digitsOnly(contact.phone_e164);
 
     const { data: inst } = await supa
       .from("evolution_instances")
