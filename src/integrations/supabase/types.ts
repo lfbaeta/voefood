@@ -4452,6 +4452,7 @@ export type Database = {
           phone_e164: string
           restaurant_id: string
           updated_at: string
+          wa_lid: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -4462,6 +4463,7 @@ export type Database = {
           phone_e164: string
           restaurant_id: string
           updated_at?: string
+          wa_lid?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -4472,6 +4474,7 @@ export type Database = {
           phone_e164?: string
           restaurant_id?: string
           updated_at?: string
+          wa_lid?: string | null
         }
         Relationships: []
       }
