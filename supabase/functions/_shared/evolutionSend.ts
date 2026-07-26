@@ -5,7 +5,7 @@ export type EvolutionSendResult = {
   path: string;
   endpoint: string;
   keySource: "global" | "instance" | "none";
-  attempts: Array<{ endpoint: string; status: number; ok: boolean; keySource: string; body: any }>;
+  attempts: Array<{ endpoint: string; target?: string; status: number; ok: boolean; keySource: string; body: any }>;
 };
 
 export type EvolutionSendConfig = {
@@ -46,7 +46,10 @@ export function chooseEvolutionTarget(phone: string | null | undefined, lid: str
 export function chooseEvolutionTargets(phone: string | null | undefined, lid: string | null | undefined): string[] {
   const phoneTarget = normalizeEvolutionTarget(phone);
   const lidTarget = normalizeEvolutionTarget(lid);
-  const targets = [phoneTarget, lidTarget].filter(Boolean);
+  // Em contas migradas para LID, a Evolution pode aceitar o telefone normal
+  // com HTTP 201/PENDING, mas o celular nunca recebe. Quando o webhook já
+  // capturou o LID do contato, ele é o destino mais fiel para entrega.
+  const targets = [lidTarget, phoneTarget].filter(Boolean);
   return [...new Set(targets)];
 }
 
@@ -220,7 +223,7 @@ export async function sendEvolutionText(
         for (let retry = 1; retry <= 3; retry++) {
           const result = await postJson(cfg, endpoint.path, endpoint.body, key.value, key.source);
           result.endpoint = endpoint.label;
-          allAttempts.push({ endpoint: endpoint.label, status: result.status, ok: result.ok, keySource: key.source, body: result.body });
+          allAttempts.push({ endpoint: endpoint.label, target: number, status: result.status, ok: result.ok, keySource: key.source, body: result.body });
           result.attempts = allAttempts;
           last = result;
 
