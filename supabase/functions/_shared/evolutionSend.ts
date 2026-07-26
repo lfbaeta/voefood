@@ -55,10 +55,13 @@ function toPhoneJid(value: string | null | undefined): string {
 }
 
 export function chooseEvolutionTarget(phone: string | null | undefined, lid: string | null | undefined): string {
+  const phoneJid = toPhoneJid(phone);
+  if (phoneJid) return phoneJid;
   const lidTarget = normalizeEvolutionSendTarget(lid);
   if (lidTarget.includes("@lid")) return lidTarget;
-  return toPhoneJid(phone) || normalizeEvolutionSendTarget(phone);
+  return normalizeEvolutionSendTarget(phone);
 }
+
 
 export function chooseEvolutionTargets(phone: string | null | undefined, lid: string | null | undefined): string[] {
   const lidTarget = normalizeEvolutionSendTarget(lid);
