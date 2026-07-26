@@ -183,6 +183,16 @@ serve(async (req) => {
       instanceUuid: inst.instance_uuid,
       debug: Deno.env.get("EVOLUTION_DEBUG") === "true",
     }, phone, message);
+    await logSendAttempt(supa, {
+      restaurant_id: order.restaurant_id,
+      instance_id: inst.id,
+      instance_name: inst.instance_name,
+      order_id: orderId,
+      source: "order-status",
+      target: phone,
+      preview: message,
+      result: sendRes,
+    });
     if (!sendRes.ok) {
       const error = formatEvolutionError(sendRes, "Falha ao enviar notificação de pedido.");
       console.error("[agent-notify-order-status] send failed", error, JSON.stringify(sendRes.attempts).slice(0, 2000));
