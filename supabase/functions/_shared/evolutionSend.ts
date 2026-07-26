@@ -408,7 +408,7 @@ export async function sendEvolutionText(
           result.endpoint = endpoint.label;
           // A Evolution v2 responde 201 com a key da mensagem e status PENDING;
           // isso significa ACEITO. Reenviar aqui só gera mensagens duplicadas.
-          const accepted = result.ok && !!extractMessageId(result.body);
+          const accepted = result.ok && !!extractEvolutionMessageId(result.body);
           allAttempts.push({ endpoint: endpoint.label, target: number, status: result.status, ok: accepted, keySource: key.source, body: result.body });
           result.attempts = allAttempts;
           last = result;
