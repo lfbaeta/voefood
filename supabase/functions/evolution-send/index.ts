@@ -105,7 +105,7 @@ async function loadConfig(supaAdmin: any, resellerId: string) {
 }
 
 async function sendByType(url: string, apiKey: string, instanceName: string, type: string, to: string, payload: Record<string, any>) {
-  const phone = digitsOnly(to);
+    const phone = digitsOnly(to);
   switch (type) {
     case "text":
       return evoFetchFirst(url, apiKey, [
@@ -351,10 +351,9 @@ serve(async (req) => {
     const cfg = await loadConfig(supaAdmin, inst.reseller_id);
     if (!cfg) return json({ error: "Servidor Evolution não configurado" }, 400);
     const apiKey = cfg.globalKey || inst.instance_token;
-    // Contas migradas para LID só recebem mensagens no endereço "<id>@lid".
-    const number = contact.wa_lid && String(contact.wa_lid).includes("@lid")
-      ? String(contact.wa_lid)
-      : digitsOnly(contact.phone_e164);
+    // O LID fica salvo só para reconhecer mensagens recebidas. No envio, o
+    // Evolution/Baileys é mais confiável usando o telefone normalizado.
+    const number = digitsOnly(contact.phone_e164);
 
     if (action === "send_text") {
       const text: string = (payload?.text ?? "").toString().trim();

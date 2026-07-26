@@ -100,6 +100,22 @@ function jidToPhone(jid: string | null | undefined): string | null {
   return digitsOnly(String(jid).split("@")[0].split(":")[0]);
 }
 
+function normalizePhoneJid(value: any): string | null {
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (!raw || raw.includes("@lid") || raw.includes("@g.us")) return null;
+  if (raw.includes("@s.whatsapp.net")) return raw;
+  const phone = digitsOnly(raw);
+  if (phone && phone.length >= 10 && phone.length <= 15) return `${phone}@s.whatsapp.net`;
+  return null;
+}
+
+function normalizeLidJid(value: any): string | null {
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  return raw.includes("@lid") ? raw : null;
+}
+
 function extractText(msg: any): string | null {
   if (!msg) return null;
   return (
@@ -194,8 +210,9 @@ function parseV2Message(m: any): ParsedMessage | null {
   if (!m?.key?.remoteJid) return null;
   const rawRemoteJid = String(m.key.remoteJid);
   const fromMe = m.key.fromMe === true;
-  // WhatsApp migrou contas para LID: o JID real da conversa pode ser "<id>@lid".
-  // Guardamos o LID para enviar no endereço correto e o telefone para exibição.
+  // WhatsApp pode mandar eventos com LID. O Evolution/Baileys ainda é instável
+  // enviando para @lid, então guardamos o LID só como chave alternativa e
+  // normalizamos o contato para o telefone quando senderPn/participantPn existir.
   const jidCandidates = [
     m.key.remoteJidAlt,
     m.key.senderPn,
@@ -204,12 +221,8 @@ function parseV2Message(m: any): ParsedMessage | null {
     m.key.participantLid,
     m.key.previousRemoteJid,
   ].filter((j: any) => typeof j === "string" && j.length > 0) as string[];
-  const lidJid = rawRemoteJid.includes("@lid")
-    ? rawRemoteJid
-    : jidCandidates.find((j) => j.includes("@lid"));
-  const phoneJid = rawRemoteJid.includes("@lid")
-    ? jidCandidates.find((j) => j.includes("@s.whatsapp.net"))
-    : rawRemoteJid;
+  const lidJid = normalizeLidJid(rawRemoteJid) ?? jidCandidates.map(normalizeLidJid).find(Boolean) ?? undefined;
+  const phoneJid = normalizePhoneJid(rawRemoteJid) ?? jidCandidates.map(normalizePhoneJid).find(Boolean) ?? undefined;
   const remoteJid = phoneJid || rawRemoteJid;
   return {
     remoteJid,
@@ -234,10 +247,10 @@ function parseGoMessage(event: string, data: any): ParsedMessage | null {
   const altJidCandidates = fromMe
     ? [info.RecipientAlt, info.RecipientPn, info.ChatAlt, info.recipientAlt, info.recipientPn, info.chatAlt]
     : [info.SenderAlt, info.SenderPn, info.senderAlt, info.senderPn];
-  const altPhoneJid = altJidCandidates.find((j: any) => typeof j === "string" && j.includes("@s.whatsapp.net")) as string | undefined;
+  const altPhoneJid = normalizePhoneJid(rawRemoteJid) ?? altJidCandidates.map(normalizePhoneJid).find(Boolean) ?? undefined;
   const remoteJid = altPhoneJid || rawRemoteJid;
   if (!remoteJid) return null;
-  const lidJid = rawRemoteJid.includes("@lid") ? rawRemoteJid : (altJidCandidates.find((j: any) => typeof j === "string" && j.includes("@lid")) as string | undefined);
+  const lidJid = normalizeLidJid(rawRemoteJid) ?? altJidCandidates.map(normalizeLidJid).find(Boolean) ?? undefined;
 
   const timestamp = info.Timestamp || info.timestamp || info.MessageTimestamp || null;
   const sentAt = safeIsoFromEvolutionTs(timestamp);
@@ -258,8 +271,9 @@ function parseGoMessage(event: string, data: any): ParsedMessage | null {
 
 async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
   if (String(msg.remoteJid).endsWith("@g.us")) return;
-  const phone = jidToPhone(msg.remoteJid);
-  if (!phone) return;
+  let phone = jidToPhone(msg.remoteJid);
+  const lidJid = msg.lidJid ?? (String(msg.remoteJid).includes("@lid") ? String(msg.remoteJid) : null);
+  if (!phone && !lidJid) return;
 
   // Auto-heal: se mensagens estão chegando, a instância está de fato conectada.
   if (instance.status !== "connected") {
@@ -291,13 +305,29 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
     }
   }
 
-
-  const { data: existingContact } = await supa
-    .from("wa_contacts")
-    .select("id, name, wa_lid")
-    .eq("restaurant_id", instance.restaurant_id)
-    .eq("phone_e164", phone)
-    .maybeSingle();
+  let existingContact: any = null;
+  if (lidJid) {
+    const { data } = await supa
+      .from("wa_contacts")
+      .select("id, name, phone_e164, wa_lid")
+      .eq("restaurant_id", instance.restaurant_id)
+      .eq("wa_lid", lidJid)
+      .maybeSingle();
+    existingContact = data ?? null;
+  }
+  if (!existingContact && phone) {
+    const { data } = await supa
+      .from("wa_contacts")
+      .select("id, name, phone_e164, wa_lid")
+      .eq("restaurant_id", instance.restaurant_id)
+      .eq("phone_e164", phone)
+      .maybeSingle();
+    existingContact = data ?? null;
+  }
+  if (existingContact?.phone_e164 && lidJid && String(msg.remoteJid).includes("@lid")) {
+    phone = existingContact.phone_e164;
+  }
+  if (!phone) return;
 
   let contactId = existingContact?.id;
   if (!contactId) {
@@ -313,8 +343,8 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
       if (matchOrder?.customer_phone) linkedCustomerPhone = matchOrder.customer_phone;
     } catch (_) {}
     const { data: ins, error: ie } = await supa
-      .from("wa_contacts")
-      .insert({ restaurant_id: instance.restaurant_id, phone_e164: phone, name: msg.pushName, linked_customer_phone: linkedCustomerPhone, wa_lid: msg.lidJid ?? null })
+        .from("wa_contacts")
+        .insert({ restaurant_id: instance.restaurant_id, phone_e164: phone, name: msg.pushName, linked_customer_phone: linkedCustomerPhone, wa_lid: lidJid ?? null })
       .select("id")
       .single();
     if (ie) {
@@ -325,7 +355,8 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
   } else {
     const patch: Record<string, unknown> = {};
     if (msg.pushName && !existingContact?.name) patch.name = msg.pushName;
-    if (msg.lidJid && existingContact?.wa_lid !== msg.lidJid) patch.wa_lid = msg.lidJid;
+    if (lidJid && existingContact?.wa_lid !== lidJid) patch.wa_lid = lidJid;
+    if (!String(msg.remoteJid).includes("@lid") && phone && existingContact?.phone_e164 !== phone) patch.phone_e164 = phone;
     if (Object.keys(patch).length > 0) {
       await supa.from("wa_contacts").update(patch).eq("id", contactId);
     }
