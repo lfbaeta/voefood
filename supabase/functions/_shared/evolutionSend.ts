@@ -79,8 +79,12 @@ export function extractEvolutionMessageId(body: any): string | null {
   return body?.key?.id ??
     body?.message?.key?.id ??
     body?.data?.key?.id ??
+    body?.response?.key?.id ??
+    body?.response?.data?.key?.id ??
     body?.messageId ??
     body?.data?.messageId ??
+    body?.response?.messageId ??
+    body?.response?.data?.messageId ??
     body?.id ??
     null;
 }
@@ -115,6 +119,7 @@ function asPendingFailure(result: EvolutionSendResult): EvolutionSendResult {
     body: {
       error: "A Evolution aceitou a mensagem, mas deixou em PENDING e não confirmou entrega ao celular.",
       evolution_status: "PENDING",
+      key: result.body?.key ?? result.body?.data?.key ?? null,
       remoteJid,
       messageId,
       response: result.body,
