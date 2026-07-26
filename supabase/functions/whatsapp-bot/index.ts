@@ -1819,10 +1819,14 @@ serve(async (req) => {
     // Contact + instance + reseller config
     const { data: contact } = await supa
       .from("wa_contacts")
-      .select("phone_e164, name")
+      .select("phone_e164, name, wa_lid")
       .eq("id", conv.contact_id)
       .maybeSingle();
     if (!contact?.phone_e164) return skipped("no_contact");
+    // Contas migradas para LID só recebem no endereço "<id>@lid".
+    const sendTarget = contact.wa_lid && String(contact.wa_lid).includes("@lid")
+      ? String(contact.wa_lid)
+      : digitsOnly(contact.phone_e164);
 
     const { data: inst } = await supa
       .from("evolution_instances")
