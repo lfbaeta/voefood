@@ -294,7 +294,7 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
 
   const { data: existingContact } = await supa
     .from("wa_contacts")
-    .select("id, name")
+    .select("id, name, wa_lid")
     .eq("restaurant_id", instance.restaurant_id)
     .eq("phone_e164", phone)
     .maybeSingle();
@@ -314,7 +314,7 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
     } catch (_) {}
     const { data: ins, error: ie } = await supa
       .from("wa_contacts")
-      .insert({ restaurant_id: instance.restaurant_id, phone_e164: phone, name: msg.pushName, linked_customer_phone: linkedCustomerPhone })
+      .insert({ restaurant_id: instance.restaurant_id, phone_e164: phone, name: msg.pushName, linked_customer_phone: linkedCustomerPhone, wa_lid: msg.lidJid ?? null })
       .select("id")
       .single();
     if (ie) {
@@ -322,8 +322,13 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
       return;
     }
     contactId = ins.id;
-  } else if (msg.pushName && !existingContact?.name) {
-    await supa.from("wa_contacts").update({ name: msg.pushName }).eq("id", contactId);
+  } else {
+    const patch: Record<string, unknown> = {};
+    if (msg.pushName && !existingContact?.name) patch.name = msg.pushName;
+    if (msg.lidJid && existingContact?.wa_lid !== msg.lidJid) patch.wa_lid = msg.lidJid;
+    if (Object.keys(patch).length > 0) {
+      await supa.from("wa_contacts").update(patch).eq("id", contactId);
+    }
   }
 
   const { data: existingConv } = await supa
