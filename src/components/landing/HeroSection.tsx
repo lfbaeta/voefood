@@ -71,13 +71,14 @@ function AnimatedCounter({ target, suffix = '', prefix = '' }: { target: number;
 export function HeroSection({ title, subtitle, primaryColor, whatsappLink, onCtaClick, stats }: HeroSectionProps) {
   return (
     <section className="relative lg:min-h-[90vh] flex items-center overflow-hidden pt-20 lg:pt-0">
-      {/* Animated gradient background */}
-      <div 
-        className="absolute inset-0 opacity-10"
+      {/* Animated gradient background (laranja claro em degradê) */}
+      <div
+        className="absolute inset-0 opacity-40"
         style={{
-          background: `linear-gradient(135deg, hsl(${primaryColor}) 0%, hsl(${primaryColor} / 0.3) 50%, transparent 100%)`,
+          background: `linear-gradient(135deg, hsl(32 100% 92%) 0%, hsl(24 100% 86%) 40%, hsl(${primaryColor} / 0.25) 70%, transparent 100%)`,
         }}
       />
+
       
       {/* Floating shapes */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
