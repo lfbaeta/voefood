@@ -429,7 +429,7 @@ serve(async (req) => {
         .maybeSingle();
       if (!msg?.wa_message_id) return json({ error: "Mensagem sem id externo" }, 400);
       const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "reaction", number, {
-        key: { remoteJid: `${number}@s.whatsapp.net`, fromMe: msg.from_me, id: msg.wa_message_id },
+        key: { remoteJid: number.includes("@") ? number : `${number}@s.whatsapp.net`, fromMe: msg.from_me, id: msg.wa_message_id },
         reaction: emoji,
       });
       if (!resp.ok) return json({ error: resp.body?.message || resp.body?.error || "Falha na reação", response: resp.body }, 400);
