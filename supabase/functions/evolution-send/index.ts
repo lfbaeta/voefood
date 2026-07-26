@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  chooseEvolutionTarget,
+  chooseEvolutionTargets,
   extractEvolutionMessageId,
   formatEvolutionError,
   normalizeEvolutionTarget,
@@ -114,11 +114,11 @@ async function sendByType(
   apiKey: string,
   instanceName: string,
   type: string,
-  to: string,
+  to: string | string[],
   payload: Record<string, any>,
   options: { globalApiKey?: string | null; instanceToken?: string | null; instanceUuid?: string | null; debug?: boolean } = {},
 ) {
-  const phone = normalizeEvolutionTarget(to);
+  const phone = (Array.isArray(to) ? to : [to]).map(normalizeEvolutionTarget).find(Boolean) ?? "";
   switch (type) {
     case "text":
       return sendEvolutionText({
@@ -128,7 +128,7 @@ async function sendByType(
         instanceName,
         instanceUuid: options.instanceUuid,
         debug: options.debug ?? Deno.env.get("EVOLUTION_DEBUG") === "true",
-      }, phone, payload.text);
+      }, to, payload.text);
     case "media": {
       const rawMedia = payload.url ?? payload.media;
       const mediaType = payload.type || payload.mediatype || "image";
@@ -376,9 +376,7 @@ serve(async (req) => {
     const cfg = await loadConfig(supaAdmin, inst.reseller_id);
     if (!cfg) return json({ error: "Servidor Evolution não configurado" }, 400);
     const apiKey = cfg.globalKey || inst.instance_token;
-    // O LID fica salvo só para reconhecer mensagens recebidas. No envio, o
-    // Evolution/Baileys é mais confiável usando o telefone normalizado.
-    const number = chooseEvolutionTarget(contact.phone_e164, contact.wa_lid);
+    const number = chooseEvolutionTargets(contact.phone_e164, contact.wa_lid);
 
     if (action === "send_text") {
       const text: string = (payload?.text ?? "").toString().trim();
