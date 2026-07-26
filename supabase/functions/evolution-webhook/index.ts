@@ -43,6 +43,10 @@ function normalizeEvent(name: string | undefined): string {
   return (name || "").trim();
 }
 
+function canonicalEvent(name: string | undefined): string {
+  return normalizeEvent(name).replace(/[.\-\s]+/g, "_").toUpperCase();
+}
+
 function normalizeQrString(value: any): string | null {
   if (typeof value !== "string") return null;
   const raw = value.trim();
@@ -156,13 +160,20 @@ function extractMedia(msg: any): { mime: string | null; filename: string | null;
 }
 
 function normalizeDbStatus(status: any, fromMe: boolean): string {
+  if (typeof status === "number") {
+    if (status <= 0) return "pending";
+    if (status === 1) return "sent";
+    if (status === 2) return "delivered";
+    if (status >= 3) return "read";
+  }
   const s = String(status || "").toLowerCase();
   // Evolution v2 devolve "PENDING" quando apenas aceitou a mensagem na fila.
   // Não marcar como enviada até chegar SEND_MESSAGE/MESSAGES_UPDATE com ACK real.
-  if (s === "pending" && fromMe) return "pending";
+  if (["pending", "pending_ack", "0"].includes(s) && fromMe) return "pending";
   if (["pending", "sent", "delivered", "read", "failed"].includes(s)) return s;
-  if (["server_ack", "delivery_ack", "played"].includes(s)) return "delivered";
-  if (["read_ack"].includes(s)) return "read";
+  if (["server_ack", "1"].includes(s)) return "sent";
+  if (["delivery_ack", "played", "2"].includes(s)) return "delivered";
+  if (["read_ack", "3", "4"].includes(s)) return "read";
   return fromMe ? "sent" : "delivered";
 }
 
@@ -210,13 +221,9 @@ type ParsedMessage = {
 };
 
 function parseV2Message(m: any): ParsedMessage | null {
-  if (!m?.key?.remoteJid) return null;
-  const rawRemoteJid = String(m.key.remoteJid);
-  const fromMe = m.key.fromMe === true;
-  // WhatsApp pode mandar eventos com LID. O Evolution/Baileys ainda é instável
-  // enviando para @lid, então guardamos o LID só como chave alternativa e
-  // normalizamos o contato para o telefone quando senderPn/participantPn existir.
+  if (!m?.key?.id && !m?.key?.remoteJid) return null;
   const jidCandidates = [
+    m.key.remoteJid,
     m.key.remoteJidAlt,
     m.key.senderPn,
     m.key.participantPn,
@@ -224,6 +231,11 @@ function parseV2Message(m: any): ParsedMessage | null {
     m.key.participantLid,
     m.key.previousRemoteJid,
   ].filter((j: any) => typeof j === "string" && j.length > 0) as string[];
+  const rawRemoteJid = String(jidCandidates[0] ?? "__status_update__");
+  const fromMe = m.key.fromMe === true;
+  // WhatsApp pode mandar eventos com LID. O Evolution/Baileys ainda é instável
+  // enviando para @lid, então guardamos o LID só como chave alternativa e
+  // normalizamos o contato para o telefone quando senderPn/participantPn existir.
   const lidJid = normalizeLidJid(rawRemoteJid) ?? jidCandidates.map(normalizeLidJid).find(Boolean) ?? undefined;
   const phoneJid = normalizePhoneJid(rawRemoteJid) ?? jidCandidates.map(normalizePhoneJid).find(Boolean) ?? undefined;
   const remoteJid = phoneJid || rawRemoteJid;
@@ -276,7 +288,6 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
   if (String(msg.remoteJid).endsWith("@g.us")) return;
   let phone = jidToPhone(msg.remoteJid);
   const lidJid = msg.lidJid ?? (String(msg.remoteJid).includes("@lid") ? String(msg.remoteJid) : null);
-  if (!phone && !lidJid) return;
 
   if (msg.fromMe && msg.waMsgId) {
     const { data: outbound } = await supa
@@ -296,6 +307,26 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
     }
 
     console.warn("[evolution-webhook] Ignorando eco outbound sem mensagem local correspondente", JSON.stringify({ waMsgId: msg.waMsgId, status: msg.status, remoteJid: msg.remoteJid }).slice(0, 500));
+    if (!phone && !lidJid) return;
+  }
+
+  if (!phone && !lidJid) {
+    if (msg.waMsgId) {
+      const { data: byId } = await supa
+        .from("wa_messages")
+        .select("id, status")
+        .eq("wa_message_id", msg.waMsgId)
+        .eq("restaurant_id", instance.restaurant_id)
+        .maybeSingle();
+      if (byId) {
+        const rank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3 };
+        const cur = rank[String(byId.status ?? "")] ?? 0;
+        const next = rank[msg.status] ?? 0;
+        if (msg.status === "failed" || next > cur) {
+          await supa.from("wa_messages").update({ status: msg.status }).eq("id", byId.id);
+        }
+      }
+    }
     return;
   }
 
@@ -464,6 +495,7 @@ serve(async (req) => {
     const event = normalizeEvent(payload?.event || payload?.Event || payload?.type || payload?.Type);
     const data = payload?.data ?? payload?.Data ?? payload;
     const eventLower = event.toLowerCase().replace(/_/g, ".");
+    const eventKey = canonicalEvent(event);
 
     await logWebhookEvent(supa, {
       restaurant_id: instance.restaurant_id,
@@ -477,7 +509,7 @@ serve(async (req) => {
       },
     });
 
-    if (["connection.update", "CONNECTION_UPDATE"].includes(event) || eventLower === "connection.update" || ["Connected", "PairSuccess", "Disconnected", "LoggedOut"].includes(event)) {
+    if (eventKey === "CONNECTION_UPDATE" || ["Connected", "PairSuccess", "Disconnected", "LoggedOut"].includes(event)) {
       const rawState = ["Connected", "PairSuccess"].includes(event)
         ? "open"
         : ["Disconnected", "LoggedOut"].includes(event)
@@ -502,7 +534,7 @@ serve(async (req) => {
       return json({ ok: true });
     }
 
-    if (["qrcode.updated", "QRCODE_UPDATED", "QRCode", "QR", "QRCodeUpdated"].includes(event) || eventLower === "qrcode.updated") {
+    if (eventKey === "QRCODE_UPDATED" || ["QRCode", "QR", "QRCodeUpdated"].includes(event)) {
       const qr = extractQr(data) || extractQr(payload);
       if (qr) {
         await supa.from("evolution_instances").update({
@@ -516,7 +548,7 @@ serve(async (req) => {
       return json({ ok: true });
     }
 
-    if (["messages.upsert", "MESSAGES_UPSERT", "messages.update", "send.message"].includes(event) || ["messages.upsert", "messages.update", "send.message"].includes(eventLower)) {
+    if (["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE"].includes(eventKey)) {
       const messages = Array.isArray(data?.messages) ? data.messages : [data];
       for (const raw of messages) {
         const parsed = parseV2Message(raw);
