@@ -192,10 +192,28 @@ type ParsedMessage = {
 
 function parseV2Message(m: any): ParsedMessage | null {
   if (!m?.key?.remoteJid) return null;
-  const remoteJid = String(m.key.remoteJid);
+  const rawRemoteJid = String(m.key.remoteJid);
   const fromMe = m.key.fromMe === true;
+  // WhatsApp migrou contas para LID: o JID real da conversa pode ser "<id>@lid".
+  // Guardamos o LID para enviar no endereço correto e o telefone para exibição.
+  const jidCandidates = [
+    m.key.remoteJidAlt,
+    m.key.senderPn,
+    m.key.participantPn,
+    m.key.senderLid,
+    m.key.participantLid,
+    m.key.previousRemoteJid,
+  ].filter((j: any) => typeof j === "string" && j.length > 0) as string[];
+  const lidJid = rawRemoteJid.includes("@lid")
+    ? rawRemoteJid
+    : jidCandidates.find((j) => j.includes("@lid"));
+  const phoneJid = rawRemoteJid.includes("@lid")
+    ? jidCandidates.find((j) => j.includes("@s.whatsapp.net"))
+    : rawRemoteJid;
+  const remoteJid = phoneJid || rawRemoteJid;
   return {
     remoteJid,
+    lidJid,
     fromMe,
     waMsgId: m.key.id ?? null,
     pushName: m.pushName ?? null,
@@ -276,7 +294,7 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
 
   const { data: existingContact } = await supa
     .from("wa_contacts")
-    .select("id, name")
+    .select("id, name, wa_lid")
     .eq("restaurant_id", instance.restaurant_id)
     .eq("phone_e164", phone)
     .maybeSingle();
@@ -296,7 +314,7 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
     } catch (_) {}
     const { data: ins, error: ie } = await supa
       .from("wa_contacts")
-      .insert({ restaurant_id: instance.restaurant_id, phone_e164: phone, name: msg.pushName, linked_customer_phone: linkedCustomerPhone })
+      .insert({ restaurant_id: instance.restaurant_id, phone_e164: phone, name: msg.pushName, linked_customer_phone: linkedCustomerPhone, wa_lid: msg.lidJid ?? null })
       .select("id")
       .single();
     if (ie) {
@@ -304,8 +322,13 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
       return;
     }
     contactId = ins.id;
-  } else if (msg.pushName && !existingContact?.name) {
-    await supa.from("wa_contacts").update({ name: msg.pushName }).eq("id", contactId);
+  } else {
+    const patch: Record<string, unknown> = {};
+    if (msg.pushName && !existingContact?.name) patch.name = msg.pushName;
+    if (msg.lidJid && existingContact?.wa_lid !== msg.lidJid) patch.wa_lid = msg.lidJid;
+    if (Object.keys(patch).length > 0) {
+      await supa.from("wa_contacts").update(patch).eq("id", contactId);
+    }
   }
 
   const { data: existingConv } = await supa

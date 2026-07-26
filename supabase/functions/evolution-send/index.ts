@@ -345,13 +345,16 @@ serve(async (req) => {
     if (!inst) return json({ error: "Instância não encontrada" }, 404);
     if (inst.status !== "connected") return json({ error: "Instância desconectada" }, 400);
 
-    const { data: contact } = await supaAdmin.from("wa_contacts").select("phone_e164").eq("id", conv.contact_id).maybeSingle();
+    const { data: contact } = await supaAdmin.from("wa_contacts").select("phone_e164, wa_lid").eq("id", conv.contact_id).maybeSingle();
     if (!contact?.phone_e164) return json({ error: "Contato sem telefone" }, 400);
 
     const cfg = await loadConfig(supaAdmin, inst.reseller_id);
     if (!cfg) return json({ error: "Servidor Evolution não configurado" }, 400);
     const apiKey = cfg.globalKey || inst.instance_token;
-    const number = digitsOnly(contact.phone_e164);
+    // Contas migradas para LID só recebem mensagens no endereço "<id>@lid".
+    const number = contact.wa_lid && String(contact.wa_lid).includes("@lid")
+      ? String(contact.wa_lid)
+      : digitsOnly(contact.phone_e164);
 
     if (action === "send_text") {
       const text: string = (payload?.text ?? "").toString().trim();
@@ -426,7 +429,7 @@ serve(async (req) => {
         .maybeSingle();
       if (!msg?.wa_message_id) return json({ error: "Mensagem sem id externo" }, 400);
       const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "reaction", number, {
-        key: { remoteJid: `${number}@s.whatsapp.net`, fromMe: msg.from_me, id: msg.wa_message_id },
+        key: { remoteJid: number.includes("@") ? number : `${number}@s.whatsapp.net`, fromMe: msg.from_me, id: msg.wa_message_id },
         reaction: emoji,
       });
       if (!resp.ok) return json({ error: resp.body?.message || resp.body?.error || "Falha na reação", response: resp.body }, 400);
