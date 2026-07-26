@@ -23,6 +23,18 @@ function digitsOnly(s: string): string {
   return s.replace(/\D/g, "");
 }
 
+function compactBody(body: any): string {
+  if (!body) return "sem detalhes";
+  if (typeof body === "string") return body.slice(0, 500);
+  return JSON.stringify(body).slice(0, 500);
+}
+
+function evoError(resp: { status: number; body: any }, fallback: string): string {
+  const raw = resp.body?.message ?? resp.body?.error ?? resp.body?.response?.message ?? resp.body?.response?.error;
+  const message = Array.isArray(raw) ? raw.join(" ") : raw ? String(raw) : "";
+  return message || `${fallback} A Evolution respondeu status ${resp.status}: ${compactBody(resp.body)}`;
+}
+
 async function evoFetch(url: string, apiKey: string, path: string, body: any) {
   console.log(`[evolution-send] POST ${path} body=${JSON.stringify(body).slice(0, 300)}`);
   const res = await fetch(`${url}${path}`, {
@@ -220,7 +232,8 @@ serve(async (req) => {
 
       const cfg = await loadConfig(supaAdmin, inst.reseller_id);
       if (!cfg) return json({ error: "Servidor Evolution não configurado" }, 400);
-      const resp = await sendByType(cfg.url, inst.instance_token || cfg.globalKey, inst.instance_name, type, to, bodyPayload);
+      const resp = await sendByType(cfg.url, cfg.globalKey || inst.instance_token, inst.instance_name, type, to, bodyPayload);
+      if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a mensagem de teste."), response: resp.body }, resp.status >= 400 ? resp.status : 502);
       return json(resp, resp.ok ? 200 : resp.status >= 400 ? resp.status : 502);
     }
 
@@ -299,8 +312,8 @@ serve(async (req) => {
         conversationId = newConv.id;
       }
 
-      const resp = await sendByType(cfg.url, inst.instance_token || cfg.globalKey, inst.instance_name, "text", phone, { text });
-      if (!resp.ok) return json({ error: resp.body?.message || resp.body?.error || "Falha ao enviar", response: resp.body }, 400);
+      const resp = await sendByType(cfg.url, cfg.globalKey || inst.instance_token, inst.instance_name, "text", phone, { text });
+      if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a primeira mensagem."), response: resp.body }, 400);
       const waId = resp.body?.key?.id ?? resp.body?.messageId ?? null;
       await supaAdmin.from("wa_messages").insert({
         restaurant_id,
@@ -337,7 +350,7 @@ serve(async (req) => {
 
     const cfg = await loadConfig(supaAdmin, inst.reseller_id);
     if (!cfg) return json({ error: "Servidor Evolution não configurado" }, 400);
-    const apiKey = inst.instance_token || cfg.globalKey;
+    const apiKey = cfg.globalKey || inst.instance_token;
     const number = digitsOnly(contact.phone_e164);
 
     if (action === "send_text") {
@@ -345,7 +358,7 @@ serve(async (req) => {
       if (!text) return json({ error: "text required" }, 400);
       if (text.length > 4096) return json({ error: "text too long" }, 400);
       const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "text", number, { text });
-      if (!resp.ok) return json({ error: resp.body?.message || resp.body?.error || "Falha ao enviar", response: resp.body }, 400);
+      if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a mensagem."), response: resp.body }, 400);
       const waId = resp.body?.key?.id ?? resp.body?.messageId ?? null;
       const { data: inserted } = await supaAdmin.from("wa_messages").insert({
         restaurant_id: conv.restaurant_id,
@@ -381,7 +394,7 @@ serve(async (req) => {
         fileName: filename,
         mimetype: mime,
       });
-      if (!resp.ok) return json({ error: resp.body?.message || resp.body?.error || "Falha ao enviar mídia", response: resp.body }, 400);
+      if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a mídia."), response: resp.body }, 400);
       const waId = resp.body?.key?.id ?? resp.body?.messageId ?? null;
       const { data: inserted } = await supaAdmin.from("wa_messages").insert({
         restaurant_id: conv.restaurant_id,

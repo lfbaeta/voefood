@@ -13,11 +13,12 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Loader2, QrCode, Power, RefreshCw, Smartphone, Star, MessageCircle, Plus, Trash2 } from 'lucide-react';
+import { Loader2, QrCode, Power, RefreshCw, Smartphone, Star, MessageCircle, Plus, Trash2, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useEffectiveRestaurantId } from '@/hooks/useEffectiveRestaurantId';
 import { QrCodeImage } from '@/components/whatsapp/QrCodeImage';
+import { getFunctionErrorMessage } from '@/lib/functionErrors';
 
 type Instance = {
   id: string;
@@ -54,6 +55,10 @@ export default function WhatsAppConnections() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrInstance, setQrInstance] = useState<Instance | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
+  const [testOpen, setTestOpen] = useState(false);
+  const [testInstance, setTestInstance] = useState<Instance | null>(null);
+  const [testPhone, setTestPhone] = useState('');
+  const [testSending, setTestSending] = useState(false);
 
   async function load() {
     if (!restaurantId) return;
@@ -63,7 +68,7 @@ export default function WhatsAppConnections() {
     });
     setIsLoading(false);
     if (error || data?.error) {
-      toast({ title: 'Erro', description: data?.error || error?.message, variant: 'destructive' });
+      toast({ title: 'Erro', description: await getFunctionErrorMessage(data, error, 'Não foi possível carregar suas conexões.'), variant: 'destructive' });
       return;
     }
     setInstances((data?.instances || []) as Instance[]);
@@ -90,7 +95,7 @@ export default function WhatsAppConnections() {
       body: { action, ...body },
     });
     if (error || data?.error) {
-      const description = data?.error || error?.context?.error || error?.message;
+      const description = await getFunctionErrorMessage(data, error, 'A Evolution não concluiu a ação.');
       toast({ title: 'Erro', description, variant: 'destructive' });
       return null;
     }
@@ -177,6 +182,39 @@ export default function WhatsAppConnections() {
     load();
   }
 
+  function openTestDialog(inst: Instance) {
+    setTestInstance(inst);
+    setTestPhone('');
+    setTestOpen(true);
+  }
+
+  async function handleSendTest() {
+    if (!restaurantId || !testInstance) return;
+    const digits = testPhone.replace(/\D/g, '');
+    if (digits.length < 10) {
+      toast({ title: 'Telefone inválido', description: 'Informe DDI, DDD e número. Ex.: 5511999998888', variant: 'destructive' });
+      return;
+    }
+    setTestSending(true);
+    const { data, error } = await supabase.functions.invoke('evolution-send', {
+      body: {
+        action: 'send_direct',
+        restaurant_id: restaurantId,
+        instance_id: testInstance.id,
+        type: 'text',
+        to: digits,
+        payload: { text: 'Mensagem de teste do VoeFood: se você recebeu esta mensagem, o envio pelo WhatsApp está funcionando.' },
+      },
+    });
+    setTestSending(false);
+    if (error || data?.error || data?.ok === false) {
+      toast({ title: 'Teste não enviado', description: await getFunctionErrorMessage(data, error, 'A mensagem de teste não foi aceita pela Evolution.'), variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Mensagem de teste enviada', description: 'Confira se ela chegou no WhatsApp informado.' });
+    setTestOpen(false);
+  }
+
   async function handleSync() {
     if (!restaurantId) return;
     setBusy('sync');
@@ -261,10 +299,15 @@ export default function WhatsAppConnections() {
                         <QrCode className="h-4 w-4 mr-1" /> Conectar
                       </Button>
                     ) : (
-                      <Button size="sm" variant="outline" onClick={() => handleDisconnect(inst)} disabled={busy === inst.id}>
-                        {busy === inst.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Power className="h-4 w-4 mr-1" />}
-                        Desconectar
-                      </Button>
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => openTestDialog(inst)} disabled={busy === inst.id}>
+                          <Send className="h-4 w-4 mr-1" /> Teste
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleDisconnect(inst)} disabled={busy === inst.id}>
+                          {busy === inst.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Power className="h-4 w-4 mr-1" />}
+                          Desconectar
+                        </Button>
+                      </>
                     )}
                     {!inst.is_default && (
                       <Button size="sm" variant="ghost" onClick={() => handleSetDefault(inst)} disabled={busy === inst.id} title="Definir como padrão">
@@ -353,6 +396,34 @@ export default function WhatsAppConnections() {
                 <RefreshCw className="h-4 w-4 mr-2" /> Novo QR
               </Button>
               <Button onClick={() => setQrOpen(false)}>Fechar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={testOpen} onOpenChange={setTestOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Enviar mensagem de teste</DialogTitle>
+              <DialogDescription>
+                A mensagem será enviada pela conexão {testInstance?.instance_name}. Use um número com DDI e DDD.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="test-phone-admin">Telefone</Label>
+              <Input
+                id="test-phone-admin"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="5511999998888"
+                inputMode="tel"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setTestOpen(false)} disabled={testSending}>Cancelar</Button>
+              <Button onClick={handleSendTest} disabled={testSending || testPhone.replace(/\D/g, '').length < 10}>
+                {testSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                Enviar teste
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

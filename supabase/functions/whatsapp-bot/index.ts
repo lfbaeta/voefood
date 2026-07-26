@@ -18,7 +18,29 @@ if (!ENC_KEY) console.error("[whatsapp-bot] AI_CRED_ENCRYPTION_KEY missing — A
 
 const HISTORY_LIMIT = 25;
 const DEFAULT_MAX_STEPS = 6;
-const PUBLIC_APP_URL = (Deno.env.get("PUBLIC_APP_URL") || "https://peddioficial.lovable.app").replace(/\/$/, "");
+const PUBLIC_APP_URL = (Deno.env.get("PUBLIC_APP_URL") || "https://voefood.com").replace(/\/$/, "");
+
+const skippedMessages: Record<string, string> = {
+  ai_disabled: "A IA está desativada nesta conversa.",
+  human_active: "A conversa está atribuída a um atendente humano.",
+  no_active_agent: "Nenhum agente ativo foi encontrado para este estabelecimento.",
+  agent_not_for_this_instance: "O agente ativo está vinculado a outra instância de WhatsApp.",
+  daily_limit_reached: "O limite diário de ações do agente foi atingido.",
+  no_credential: "O provedor de IA escolhido exige uma chave de API que ainda não foi cadastrada.",
+  encryption_key_missing: "A chave interna de criptografia das credenciais de IA não está configurada.",
+  decrypt_failed: "Não foi possível descriptografar a chave de IA cadastrada.",
+  no_contact: "A conversa não tem telefone de contato válido.",
+  instance_disconnected: "A instância de WhatsApp desta conversa está desconectada.",
+  no_evo_cfg: "A configuração do servidor Evolution está incompleta.",
+  no_inbound_message: "Não há mensagem recebida para o agente responder.",
+  already_replied: "O agente já respondeu a última mensagem recebida.",
+  duplicate_claim: "A última mensagem recebida já está em processamento ou já foi respondida.",
+  contact_rate_limit: "O limite de mensagens por hora para este contato foi atingido.",
+  no_reply: "A IA não retornou texto para enviar ao cliente.",
+};
+
+const skipped = (reason: string, extra: Record<string, unknown> = {}) =>
+  json({ ok: true, skipped: reason, message: skippedMessages[reason] ?? reason, ...extra });
 
 // Constrói a URL pública do restaurante no formato de subdomínio
 // (https://{slug}.{host}). Cai no formato /r/:slug quando o host base for
@@ -1639,7 +1661,14 @@ async function evoPost(server: string, apiKey: string, path: string, bodyPayload
 }
 
 function bodyPreview(body: any): string {
-  return typeof body === "string" ? body.slice(0, 500) : JSON.stringify(body).slice(0, 500);
+  return typeof body === "string" ? body.slice(0, 500) : JSON.stringify(body ?? null).slice(0, 500);
+}
+
+function sendErrorMessage(result: Awaited<ReturnType<typeof evoPost>> | null): string {
+  if (!result) return "A Evolution não respondeu ao envio.";
+  const raw = result.body?.message ?? result.body?.error ?? result.body?.response?.message ?? result.body?.response?.error;
+  const message = Array.isArray(raw) ? raw.join(" ") : raw ? String(raw) : "";
+  return message || `A Evolution respondeu status ${result.status} no caminho ${result.path}: ${bodyPreview(result.body)}`;
 }
 
 async function sendWhatsApp(server: string, apiKey: string, instance: string, number: string, text: string) {
@@ -1717,8 +1746,8 @@ serve(async (req) => {
       .eq("id", conversation_id)
       .maybeSingle();
     if (!conv) return json({ error: "conv not found" }, 404);
-    if (!conv.ai_enabled) return json({ ok: true, skipped: "ai_disabled" });
-    if (conv.assigned_user_id) return json({ ok: true, skipped: "human_active" });
+    if (!conv.ai_enabled) return skipped("ai_disabled");
+    if (conv.assigned_user_id) return skipped("human_active");
 
     // Resolve agent (assigned or default)
     let agent: any = null;
@@ -1737,11 +1766,11 @@ serve(async (req) => {
         .maybeSingle();
       agent = data;
     }
-    if (!agent) return json({ ok: true, skipped: "no_active_agent" });
+    if (!agent) return skipped("no_active_agent");
 
     // Dedicated instance filter: if agent is bound to a specific WA instance, only handle messages from there
     if (agent.dedicated_instance_id && agent.dedicated_instance_id !== conv.instance_id) {
-      return json({ ok: true, skipped: "agent_not_for_this_instance" });
+      return skipped("agent_not_for_this_instance");
     }
 
     // Daily safety limits
@@ -1758,7 +1787,7 @@ serve(async (req) => {
         .eq("restaurant_id", conv.restaurant_id)
         .gte("created_at", since);
       if ((count ?? 0) >= limits.max_tool_executions_per_day) {
-        return json({ ok: true, skipped: "daily_limit_reached" });
+        return skipped("daily_limit_reached");
       }
     }
 
@@ -1780,10 +1809,10 @@ serve(async (req) => {
         .eq("restaurant_id", conv.restaurant_id)
         .eq("provider", provider)
         .maybeSingle();
-      if (!cred?.api_key_encrypted) return json({ ok: true, skipped: "no_credential" });
-      if (!ENC_KEY) return json({ ok: true, skipped: "encryption_key_missing" });
+      if (!cred?.api_key_encrypted) return skipped("no_credential");
+      if (!ENC_KEY) return skipped("encryption_key_missing");
       const { data: dec } = await supa.rpc("decrypt_ai_credential", { p_key: ENC_KEY, p_cipher: cred.api_key_encrypted });
-      if (!dec) return json({ ok: true, skipped: "decrypt_failed" });
+      if (!dec) return skipped("decrypt_failed");
       apiKey = String(dec);
     }
 
@@ -1793,21 +1822,21 @@ serve(async (req) => {
       .select("phone_e164, name")
       .eq("id", conv.contact_id)
       .maybeSingle();
-    if (!contact?.phone_e164) return json({ ok: true, skipped: "no_contact" });
+    if (!contact?.phone_e164) return skipped("no_contact");
 
     const { data: inst } = await supa
       .from("evolution_instances")
       .select("id, instance_name, reseller_id, status, instance_token")
       .eq("id", conv.instance_id)
       .maybeSingle();
-    if (!inst || inst.status !== "connected") return json({ ok: true, skipped: "instance_disconnected" });
+    if (!inst || inst.status !== "connected") return skipped("instance_disconnected");
 
     const { data: cfg } = await supa
       .from("reseller_evolution_config")
       .select("server_url, global_api_key")
       .eq("reseller_id", inst.reseller_id)
       .maybeSingle();
-    if (!cfg?.server_url || !cfg?.global_api_key) return json({ ok: true, skipped: "no_evo_cfg" });
+    if (!cfg?.server_url || !cfg?.global_api_key) return skipped("no_evo_cfg");
 
     // Restaurant store config for richer system context
     const { data: store } = await supa
@@ -1882,9 +1911,9 @@ serve(async (req) => {
     const latestOutbound = [...ordered].reverse().find((m: any) =>
       m.direction === "out" && ["sent", "delivered", "read"].includes(String(m.status || ""))
     );
-    if (!latestInbound?.id) return json({ ok: true, skipped: "no_inbound_message" });
+    if (!latestInbound?.id) return skipped("no_inbound_message");
     if (latestOutbound?.created_at && new Date(latestOutbound.created_at) > new Date(latestInbound.created_at)) {
-      return json({ ok: true, skipped: "already_replied" });
+      return skipped("already_replied");
     }
 
     // ============ PROMPT-INJECTION GUARD ============
@@ -1921,7 +1950,7 @@ serve(async (req) => {
         .eq("direction", "out")
         .gte("created_at", sinceHr);
       if ((outCount ?? 0) >= maxPerHour) {
-        return json({ ok: true, skipped: "contact_rate_limit" });
+        return skipped("contact_rate_limit");
       }
     }
 
@@ -1932,7 +1961,7 @@ serve(async (req) => {
     });
     if (claimError) {
       if (claimError.code === "23505" && latestOutbound?.created_at && new Date(latestOutbound.created_at) > new Date(latestInbound.created_at)) {
-        return json({ ok: true, skipped: "duplicate_claim" });
+        return skipped("duplicate_claim");
       }
       if (claimError.code === "23505") {
         console.warn("[whatsapp-bot] retrying previously claimed inbound with no successful outbound", latestInbound.id);
@@ -2036,20 +2065,24 @@ serve(async (req) => {
       break;
     }
 
-    if (!finalText) return json({ ok: true, skipped: "no_reply" });
+    if (!finalText) return skipped("no_reply");
 
     // Split in bubbles, dedupe, send sequentially with small typing delay
     const number = digitsOnly(contact.phone_e164);
     const bubbles = splitBubbles(finalText, !!agent.split_messages);
     const typingDelay = Math.max(0, Math.min(Number(agent.typing_delay_ms ?? 800), 5000));
     let anyFailed = false;
+    const failures: string[] = [];
 
     for (let i = 0; i < bubbles.length; i++) {
       const b = bubbles[i];
       if (!b) continue;
       if (i > 0 && typingDelay > 0) await sleep(typingDelay);
       const sendRes = await sendWhatsApp(cfg.server_url, evo_api_key, inst.instance_name, number, b);
-      if (!sendRes.ok) anyFailed = true;
+      if (!sendRes.ok) {
+        anyFailed = true;
+        failures.push(sendErrorMessage(sendRes));
+      }
       const waId = sendRes.body?.key?.id ?? sendRes.body?.messageId ?? null;
       await supa.from("wa_messages").insert({
         restaurant_id: conv.restaurant_id,
@@ -2064,7 +2097,11 @@ serve(async (req) => {
       });
     }
 
-    return json({ ok: true, sent: !anyFailed, bubbles: bubbles.length });
+    if (anyFailed) {
+      return json({ ok: false, sent: false, error: failures.join(" | ") || "A Evolution recusou o envio da resposta do agente.", bubbles: bubbles.length }, 502);
+    }
+
+    return json({ ok: true, sent: true, bubbles: bubbles.length });
   } catch (e: any) {
     console.error("[whatsapp-bot] fatal", e);
     return json({ error: "internal" }, 500);
