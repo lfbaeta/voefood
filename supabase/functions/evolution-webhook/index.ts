@@ -307,7 +307,7 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
     }
 
     console.warn("[evolution-webhook] Ignorando eco outbound sem mensagem local correspondente", JSON.stringify({ waMsgId: msg.waMsgId, status: msg.status, remoteJid: msg.remoteJid }).slice(0, 500));
-    if (!phone && !lidJid) return;
+    return;
   }
 
   if (!phone && !lidJid) {
@@ -494,7 +494,6 @@ serve(async (req) => {
     const payload = await req.json().catch(() => ({}));
     const event = normalizeEvent(payload?.event || payload?.Event || payload?.type || payload?.Type);
     const data = payload?.data ?? payload?.Data ?? payload;
-    const eventLower = event.toLowerCase().replace(/_/g, ".");
     const eventKey = canonicalEvent(event);
 
     await logWebhookEvent(supa, {
