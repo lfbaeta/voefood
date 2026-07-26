@@ -1661,7 +1661,7 @@ async function evoPost(server: string, apiKey: string, path: string, bodyPayload
 }
 
 function bodyPreview(body: any): string {
-  return typeof body === "string" ? body.slice(0, 500) : JSON.stringify(body).slice(0, 500);
+  return typeof body === "string" ? body.slice(0, 500) : JSON.stringify(body ?? null).slice(0, 500);
 }
 
 function sendErrorMessage(result: Awaited<ReturnType<typeof evoPost>> | null): string {
