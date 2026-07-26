@@ -79,8 +79,12 @@ export function extractEvolutionMessageId(body: any): string | null {
   return body?.key?.id ??
     body?.message?.key?.id ??
     body?.data?.key?.id ??
+    body?.response?.key?.id ??
+    body?.response?.data?.key?.id ??
     body?.messageId ??
     body?.data?.messageId ??
+    body?.response?.messageId ??
+    body?.response?.data?.messageId ??
     body?.id ??
     null;
 }
@@ -102,6 +106,27 @@ export function getEvolutionOutgoingStatus(body: any): "pending" | "sent" | "del
   return "pending";
 }
 
+function isOnlyQueuedByEvolution(body: any): boolean {
+  return getEvolutionOutgoingStatus(body) === "pending";
+}
+
+function asPendingFailure(result: EvolutionSendResult): EvolutionSendResult {
+  const remoteJid = result.body?.key?.remoteJid ?? result.body?.data?.key?.remoteJid ?? null;
+  const messageId = result.body?.key?.id ?? result.body?.data?.key?.id ?? null;
+  return {
+    ...result,
+    ok: false,
+    body: {
+      error: "A Evolution aceitou a mensagem, mas deixou em PENDING e não confirmou entrega ao celular.",
+      evolution_status: "PENDING",
+      key: result.body?.key ?? result.body?.data?.key ?? null,
+      remoteJid,
+      messageId,
+      response: result.body,
+    },
+  };
+}
+
 function bodyPreview(body: any, limit = 1200): string {
   if (body == null) return "sem body";
   if (typeof body === "string") return body.slice(0, limit);
@@ -114,7 +139,8 @@ function bodyPreview(body: any, limit = 1200): string {
 
 export function formatEvolutionError(result: EvolutionSendResult | null, fallback = "A Evolution recusou o envio."): string {
   if (!result) return "A Evolution não respondeu ao envio.";
-  const raw = result.body?.message ??
+  const raw = result.body?.error ??
+    result.body?.message ??
     result.body?.error ??
     result.body?.response?.message ??
     result.body?.response?.error ??
@@ -286,7 +312,10 @@ export async function sendEvolutionText(
   const phoneSeed = uniqueNumbers.find((n) => !n.includes("@lid"));
   if (phoneSeed) {
     const resolved = await resolveEvolutionJid(cfg, phoneSeed.split("@")[0]);
-    if (resolved) uniqueNumbers = [...new Set([resolved, ...uniqueNumbers])];
+    if (resolved) {
+      const resolvedPhone = normalizeEvolutionTarget(resolved);
+      uniqueNumbers = [...new Set([resolvedPhone, resolved, ...uniqueNumbers].filter(Boolean))];
+    }
   }
 
   if (!uniqueNumbers.length) {
@@ -318,8 +347,10 @@ export async function sendEvolutionText(
       { label: "v2-sendMessage", path: `/message/sendMessage/${instance}`, body: { number, text }, preferredKey: "global" as const },
       { label: "go-send-text", path: "/send/text", body: { number, text }, preferredKey: "instance" as const },
     ];
+    let queuedOnlyForTarget = false;
 
     for (const endpoint of endpoints) {
+      if (queuedOnlyForTarget) break;
       const keys = keyCandidates(cfg, endpoint.preferredKey);
       if (!keys.length) {
         last = { ok: false, status: 401, body: { error: "API key da Evolution ausente." }, path: endpoint.path, endpoint: endpoint.label, keySource: "none", attempts: allAttempts };
@@ -330,11 +361,18 @@ export async function sendEvolutionText(
         for (let retry = 1; retry <= 3; retry++) {
           const result = await postJson(cfg, endpoint.path, endpoint.body, key.value, key.source);
           result.endpoint = endpoint.label;
-          allAttempts.push({ endpoint: endpoint.label, target: number, status: result.status, ok: result.ok, keySource: key.source, body: result.body });
+          const queuedOnly = result.ok && isOnlyQueuedByEvolution(result.body);
+          allAttempts.push({ endpoint: endpoint.label, target: number, status: result.status, ok: result.ok && !queuedOnly, keySource: key.source, body: result.body });
           result.attempts = allAttempts;
-          last = result;
+          last = queuedOnly ? asPendingFailure(result) : result;
+          last.attempts = allAttempts;
 
-          if (result.ok) return result;
+          if (result.ok && !queuedOnly) return result;
+          if (queuedOnly) {
+            console.warn(`[evolution-send] ${endpoint.label} target=${number} returned PENDING only; trying next target before reporting success.`);
+            queuedOnlyForTarget = true;
+            break;
+          }
           if (!isTransient(result.status) || retry === 3) break;
           await sleep(600 * retry);
         }
