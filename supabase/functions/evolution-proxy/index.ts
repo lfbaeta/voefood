@@ -690,10 +690,21 @@ serve(async (req) => {
       if (!restaurant_id) return json({ error: "restaurant_id required" }, 400);
       const resellerId = await assertAccessTo(restaurant_id);
       const cfg = await getCfgForReseller(resellerId);
-      const resp = await evoFetch(cfg, "/instance/all", { method: "GET" });
-      if (!resp.ok) return json({ error: resp.message || "Falha ao sincronizar", response: resp.body }, 400);
+      // Evolution API v2 usa /instance/fetchInstances; Evolution Go usa /instance/all
+      const listPaths = ["/instance/fetchInstances", "/instance/all"];
+      let resp: Awaited<ReturnType<typeof evoFetch>> | null = null;
+      const listErrors: string[] = [];
+      for (const p of listPaths) {
+        const r = await evoFetch(cfg, p, { method: "GET" });
+        if (r.ok) { resp = r; break; }
+        listErrors.push(`${p}: ${r.message || r.status}`);
+      }
+      if (!resp) {
+        return json({ ok: false, error: `Falha ao sincronizar (${listErrors.join(" | ")})` }, 200);
+      }
 
       const parsed = extractInstanceList(resp.body).map(parseInstanceFromList).filter((p) => p.name);
+
       const { data: dbList } = await supaAdmin
         .from("evolution_instances")
         .select("id, instance_name, instance_uuid, instance_token, webhook_token")
