@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractEvolutionMessageId, formatEvolutionError, sendEvolutionText } from "../_shared/evolutionSend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,7 +17,6 @@ const json = (b: unknown, s = 200) =>
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-function digitsOnly(s: string) { return String(s || "").replace(/\D/g, ""); }
 function normalizeUrl(u: string) { return u.trim().replace(/\/$/, ""); }
 
 const fmtCurrency = (v: number) =>
@@ -172,29 +172,22 @@ serve(async (req) => {
       .maybeSingle();
     if (!evoCfg?.server_url || !evoCfg?.global_api_key) return json({ ok: true, skipped: "no_evo_config" });
 
-    const apiKey = inst.instance_token || evoCfg.global_api_key;
     const url = normalizeUrl(evoCfg.server_url);
-    const phone = digitsOnly(order.customer_phone);
-    if (phone.length < 10) return json({ ok: true, skipped: "invalid_phone" });
-
-    let waId: string | null = null;
-    async function tryPost(path: string) {
-      const r = await fetch(`${url}${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: apiKey },
-        body: JSON.stringify({ number: phone, text: message }),
-      }).catch(() => null);
-      if (r && r.ok) {
-        const j = await r.json().catch(() => ({}));
-        waId = j?.key?.id ?? j?.messageId ?? null;
-        return true;
-      }
-      if (r) console.error(`[agent-notify-order-status] ${path} failed`, r.status, await r.text().catch(() => ""));
-      return false;
+    const phone = String(order.customer_phone || "");
+    const sendRes = await sendEvolutionText({
+      serverUrl: url,
+      globalApiKey: evoCfg.global_api_key,
+      instanceToken: inst.instance_token,
+      instanceName: inst.instance_name,
+      instanceUuid: inst.instance_uuid,
+      debug: Deno.env.get("EVOLUTION_DEBUG") === "true",
+    }, phone, message);
+    if (!sendRes.ok) {
+      const error = formatEvolutionError(sendRes, "Falha ao enviar notificação de pedido.");
+      console.error("[agent-notify-order-status] send failed", error, JSON.stringify(sendRes.attempts).slice(0, 2000));
+      return json({ ok: false, error, response: sendRes.body, attempts: sendRes.attempts }, 502);
     }
-    const ok = (await tryPost(`/message/sendText/${inst.instance_name}`))
-      || (await tryPost(`/send/text`));
-    if (!ok) return json({ ok: false, error: "send_failed" }, 502);
+    const waId = extractEvolutionMessageId(sendRes.body);
 
     await supa.from("agent_status_dispatches").insert({
       order_id: orderId,

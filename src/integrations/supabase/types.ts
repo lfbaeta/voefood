@@ -4539,6 +4539,7 @@ export type Database = {
           media_url: string | null
           reply_to_id: string | null
           restaurant_id: string
+          send_error: string | null
           sender_user_id: string | null
           sent_at: string | null
           status: string
@@ -4557,6 +4558,7 @@ export type Database = {
           media_url?: string | null
           reply_to_id?: string | null
           restaurant_id: string
+          send_error?: string | null
           sender_user_id?: string | null
           sent_at?: string | null
           status?: string
@@ -4575,6 +4577,7 @@ export type Database = {
           media_url?: string | null
           reply_to_id?: string | null
           restaurant_id?: string
+          send_error?: string | null
           sender_user_id?: string | null
           sent_at?: string | null
           status?: string

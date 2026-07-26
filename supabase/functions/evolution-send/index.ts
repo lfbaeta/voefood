@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  chooseEvolutionTargets,
+  extractEvolutionMessageId,
+  formatEvolutionError,
+  normalizeEvolutionTarget,
+  sendEvolutionText,
+} from "../_shared/evolutionSend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,9 +37,7 @@ function compactBody(body: any): string {
 }
 
 function evoError(resp: { status: number; body: any }, fallback: string): string {
-  const raw = resp.body?.message ?? resp.body?.error ?? resp.body?.response?.message ?? resp.body?.response?.error;
-  const message = Array.isArray(raw) ? raw.join(" ") : raw ? String(raw) : "";
-  return message || `${fallback} A Evolution respondeu status ${resp.status}: ${compactBody(resp.body)}`;
+  return formatEvolutionError(resp as any, fallback);
 }
 
 async function evoFetch(url: string, apiKey: string, path: string, body: any) {
@@ -104,14 +109,26 @@ async function loadConfig(supaAdmin: any, resellerId: string) {
   return { url: normalizeUrl(cfg.server_url), globalKey: cfg.global_api_key };
 }
 
-async function sendByType(url: string, apiKey: string, instanceName: string, type: string, to: string, payload: Record<string, any>) {
-    const phone = digitsOnly(to);
+async function sendByType(
+  url: string,
+  apiKey: string,
+  instanceName: string,
+  type: string,
+  to: string | string[],
+  payload: Record<string, any>,
+  options: { globalApiKey?: string | null; instanceToken?: string | null; instanceUuid?: string | null; debug?: boolean } = {},
+) {
+  const phone = (Array.isArray(to) ? to : [to]).map(normalizeEvolutionTarget).find(Boolean) ?? "";
   switch (type) {
     case "text":
-      return evoFetchFirst(url, apiKey, [
-        { path: `/message/sendText/${encodeURIComponent(instanceName)}`, body: { number: phone, text: payload.text } },
-        { path: "/send/text", body: { number: phone, text: payload.text } },
-      ]);
+      return sendEvolutionText({
+        serverUrl: url,
+        globalApiKey: options.globalApiKey ?? apiKey,
+        instanceToken: options.instanceToken,
+        instanceName,
+        instanceUuid: options.instanceUuid,
+        debug: options.debug ?? Deno.env.get("EVOLUTION_DEBUG") === "true",
+      }, to, payload.text);
     case "media": {
       const rawMedia = payload.url ?? payload.media;
       const mediaType = payload.type || payload.mediatype || "image";
@@ -232,7 +249,11 @@ serve(async (req) => {
 
       const cfg = await loadConfig(supaAdmin, inst.reseller_id);
       if (!cfg) return json({ error: "Servidor Evolution não configurado" }, 400);
-      const resp = await sendByType(cfg.url, cfg.globalKey || inst.instance_token, inst.instance_name, type, to, bodyPayload);
+      const resp = await sendByType(cfg.url, cfg.globalKey || inst.instance_token, inst.instance_name, type, to, bodyPayload, {
+        globalApiKey: cfg.globalKey,
+        instanceToken: inst.instance_token,
+        instanceUuid: inst.instance_uuid,
+      });
       if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a mensagem de teste."), response: resp.body }, resp.status >= 400 ? resp.status : 502);
       return json(resp, resp.ok ? 200 : resp.status >= 400 ? resp.status : 502);
     }
@@ -312,9 +333,13 @@ serve(async (req) => {
         conversationId = newConv.id;
       }
 
-      const resp = await sendByType(cfg.url, cfg.globalKey || inst.instance_token, inst.instance_name, "text", phone, { text });
+      const resp = await sendByType(cfg.url, cfg.globalKey || inst.instance_token, inst.instance_name, "text", phone, { text }, {
+        globalApiKey: cfg.globalKey,
+        instanceToken: inst.instance_token,
+        instanceUuid: inst.instance_uuid,
+      });
       if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a primeira mensagem."), response: resp.body }, 400);
-      const waId = resp.body?.key?.id ?? resp.body?.messageId ?? null;
+      const waId = extractEvolutionMessageId(resp.body);
       await supaAdmin.from("wa_messages").insert({
         restaurant_id,
         conversation_id: conversationId,
@@ -351,29 +376,37 @@ serve(async (req) => {
     const cfg = await loadConfig(supaAdmin, inst.reseller_id);
     if (!cfg) return json({ error: "Servidor Evolution não configurado" }, 400);
     const apiKey = cfg.globalKey || inst.instance_token;
-    // O LID fica salvo só para reconhecer mensagens recebidas. No envio, o
-    // Evolution/Baileys é mais confiável usando o telefone normalizado.
-    const number = digitsOnly(contact.phone_e164);
+    const number = chooseEvolutionTargets(contact.phone_e164, contact.wa_lid);
 
     if (action === "send_text") {
       const text: string = (payload?.text ?? "").toString().trim();
       if (!text) return json({ error: "text required" }, 400);
       if (text.length > 4096) return json({ error: "text too long" }, 400);
-      const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "text", number, { text });
-      if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a mensagem."), response: resp.body }, 400);
-      const waId = resp.body?.key?.id ?? resp.body?.messageId ?? null;
-      const { data: inserted } = await supaAdmin.from("wa_messages").insert({
+      const { data: inserted, error: insertErr } = await supaAdmin.from("wa_messages").insert({
         restaurant_id: conv.restaurant_id,
         conversation_id: conv.id,
-        wa_message_id: waId,
         direction: "out",
         from_me: true,
         content_type: "text",
         text,
-        status: "sent",
+        status: "pending",
         sender_user_id: user.id,
         sent_at: new Date().toISOString(),
       }).select("id").single();
+      if (insertErr || !inserted?.id) return json({ error: insertErr?.message || "Falha ao salvar mensagem pendente" }, 500);
+
+      const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "text", number, { text }, {
+        globalApiKey: cfg.globalKey,
+        instanceToken: inst.instance_token,
+        instanceUuid: inst.instance_uuid,
+      });
+      const waId = extractEvolutionMessageId(resp.body);
+      await supaAdmin.from("wa_messages").update({
+        wa_message_id: waId,
+        status: resp.ok ? "sent" : "failed",
+        send_error: resp.ok ? null : evoError(resp, "Falha ao enviar a mensagem."),
+      }).eq("id", inserted.id);
+      if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a mensagem."), response: resp.body, attempts: (resp as any).attempts }, 400);
       return json({ ok: true, id: inserted?.id });
     }
 
@@ -395,9 +428,9 @@ serve(async (req) => {
         caption,
         fileName: filename,
         mimetype: mime,
-      });
+      }, { globalApiKey: cfg.globalKey, instanceToken: inst.instance_token, instanceUuid: inst.instance_uuid });
       if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a mídia."), response: resp.body }, 400);
-      const waId = resp.body?.key?.id ?? resp.body?.messageId ?? null;
+      const waId = extractEvolutionMessageId(resp.body);
       const { data: inserted } = await supaAdmin.from("wa_messages").insert({
         restaurant_id: conv.restaurant_id,
         conversation_id: conv.id,
@@ -430,14 +463,14 @@ serve(async (req) => {
       const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "reaction", number, {
         key: { remoteJid: number.includes("@") ? number : `${number}@s.whatsapp.net`, fromMe: msg.from_me, id: msg.wa_message_id },
         reaction: emoji,
-      });
+      }, { globalApiKey: cfg.globalKey, instanceToken: inst.instance_token, instanceUuid: inst.instance_uuid });
       if (!resp.ok) return json({ error: resp.body?.message || resp.body?.error || "Falha na reação", response: resp.body }, 400);
       return json({ ok: true });
     }
 
     if (action === "set_presence") {
       const presence: string = payload?.presence || "composing";
-      const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "presence", number, { presence });
+      const resp = await sendByType(cfg.url, apiKey, inst.instance_name, "presence", number, { presence }, { globalApiKey: cfg.globalKey, instanceToken: inst.instance_token, instanceUuid: inst.instance_uuid });
       return json({ ok: resp.ok });
     }
 
