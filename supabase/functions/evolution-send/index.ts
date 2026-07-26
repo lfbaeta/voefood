@@ -233,6 +233,7 @@ serve(async (req) => {
       const cfg = await loadConfig(supaAdmin, inst.reseller_id);
       if (!cfg) return json({ error: "Servidor Evolution não configurado" }, 400);
       const resp = await sendByType(cfg.url, cfg.globalKey || inst.instance_token, inst.instance_name, type, to, bodyPayload);
+      if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a mensagem de teste."), response: resp.body }, resp.status >= 400 ? resp.status : 502);
       return json(resp, resp.ok ? 200 : resp.status >= 400 ? resp.status : 502);
     }
 
