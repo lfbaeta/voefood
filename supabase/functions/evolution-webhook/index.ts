@@ -192,10 +192,28 @@ type ParsedMessage = {
 
 function parseV2Message(m: any): ParsedMessage | null {
   if (!m?.key?.remoteJid) return null;
-  const remoteJid = String(m.key.remoteJid);
+  const rawRemoteJid = String(m.key.remoteJid);
   const fromMe = m.key.fromMe === true;
+  // WhatsApp migrou contas para LID: o JID real da conversa pode ser "<id>@lid".
+  // Guardamos o LID para enviar no endereço correto e o telefone para exibição.
+  const jidCandidates = [
+    m.key.remoteJidAlt,
+    m.key.senderPn,
+    m.key.participantPn,
+    m.key.senderLid,
+    m.key.participantLid,
+    m.key.previousRemoteJid,
+  ].filter((j: any) => typeof j === "string" && j.length > 0) as string[];
+  const lidJid = rawRemoteJid.includes("@lid")
+    ? rawRemoteJid
+    : jidCandidates.find((j) => j.includes("@lid"));
+  const phoneJid = rawRemoteJid.includes("@lid")
+    ? jidCandidates.find((j) => j.includes("@s.whatsapp.net"))
+    : rawRemoteJid;
+  const remoteJid = phoneJid || rawRemoteJid;
   return {
     remoteJid,
+    lidJid,
     fromMe,
     waMsgId: m.key.id ?? null,
     pushName: m.pushName ?? null,
