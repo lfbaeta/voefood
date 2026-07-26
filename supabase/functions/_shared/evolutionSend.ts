@@ -369,7 +369,7 @@ export async function sendEvolutionText(
 
           if (result.ok && !queuedOnly) return result;
           if (queuedOnly) {
-            console.warn(`[evolution-send] ${endpoint.label} target=${number} returned PENDING only; trying next fallback before reporting success.`);
+            console.warn(`[evolution-send] ${endpoint.label} target=${number} returned PENDING only; trying next target before reporting success.`);
             queuedOnlyForTarget = true;
             break;
           }
