@@ -104,10 +104,23 @@ export default function AIRouting() {
     const { data, error } = await supabase.functions.invoke('manage-ai-credential', {
       body: { action: 'set', restaurant_id: restaurantId, provider: keyDialog, api_key: keyValue.trim() },
     });
-    if (error || data?.error) { toast({ title: 'Erro', description: data?.error || error?.message, variant: 'destructive' }); return; }
+    if (error || data?.error) {
+      let detail = data?.error || error?.message;
+      try {
+        const ctx = (error as any)?.context;
+        if (ctx?.text) {
+          const raw = await ctx.text();
+          const parsed = JSON.parse(raw);
+          detail = parsed?.error || raw || detail;
+        }
+      } catch { /* ignore */ }
+      toast({ title: 'Erro', description: detail, variant: 'destructive' });
+      return;
+    }
     toast({ title: 'Chave salva' });
     setKeyDialog(null); setKeyValue(''); load();
   }
+
 
   async function handleClearKey(provider: 'openai' | 'gemini') {
     const { error } = await supabase.functions.invoke('manage-ai-credential', {
