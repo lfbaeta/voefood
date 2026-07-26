@@ -33,7 +33,7 @@ import {
   Truck,
   ScrollText,
   BarChart3,
-  Pizza
+  Pizza,
   Activity,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
