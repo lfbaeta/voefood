@@ -37,19 +37,37 @@ export function normalizeEvolutionTarget(value: string | null | undefined): stri
   return digitsOnly(raw);
 }
 
+function normalizeEvolutionSendTarget(value: string | null | undefined): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (raw.includes("@lid")) return raw.split(":")[0];
+  if (raw.includes("@s.whatsapp.net")) {
+    const phone = digitsOnly(raw.split("@")[0]);
+    return phone ? `${phone}@s.whatsapp.net` : raw;
+  }
+  return digitsOnly(raw);
+}
+
+function toPhoneJid(value: string | null | undefined): string {
+  const phone = normalizeEvolutionTarget(value);
+  if (!phone || phone.includes("@lid") || phone.length < 10 || phone.length > 15) return "";
+  return `${phone}@s.whatsapp.net`;
+}
+
 export function chooseEvolutionTarget(phone: string | null | undefined, lid: string | null | undefined): string {
-  const lidTarget = normalizeEvolutionTarget(lid);
+  const lidTarget = normalizeEvolutionSendTarget(lid);
   if (lidTarget.includes("@lid")) return lidTarget;
-  return normalizeEvolutionTarget(phone);
+  return toPhoneJid(phone) || normalizeEvolutionSendTarget(phone);
 }
 
 export function chooseEvolutionTargets(phone: string | null | undefined, lid: string | null | undefined): string[] {
-  const phoneTarget = normalizeEvolutionTarget(phone);
-  const lidTarget = normalizeEvolutionTarget(lid);
-  // Em contas migradas para LID, a Evolution pode aceitar o telefone normal
-  // com HTTP 201/PENDING, mas o celular nunca recebe. Quando o webhook já
-  // capturou o LID do contato, ele é o destino mais fiel para entrega.
-  const targets = [lidTarget, phoneTarget].filter(Boolean);
+  const lidTarget = normalizeEvolutionSendTarget(lid);
+  const phoneJidTarget = toPhoneJid(phone);
+  const phoneTarget = normalizeEvolutionSendTarget(phone);
+  // Evolution v2/Baileys pode aceitar o telefone puro com 201/PENDING e não
+  // entregar no aparelho. Tentar primeiro o JID explícito aumenta a chance de
+  // acertar o chat real; LID continua prioritário quando o webhook já capturou.
+  const targets = [lidTarget, phoneJidTarget, phoneTarget].filter(Boolean);
   return [...new Set(targets)];
 }
 
@@ -199,7 +217,7 @@ export async function sendEvolutionText(
   to: string | string[],
   text: string,
 ): Promise<EvolutionSendResult> {
-  const numbers = (Array.isArray(to) ? to : [to]).map(normalizeEvolutionTarget).filter(Boolean);
+  const numbers = (Array.isArray(to) ? to : [to]).map(normalizeEvolutionSendTarget).filter(Boolean);
   const uniqueNumbers = [...new Set(numbers)];
   if (!uniqueNumbers.length) {
     return {
@@ -218,7 +236,8 @@ export async function sendEvolutionText(
   let last: EvolutionSendResult | null = null;
 
   for (const number of uniqueNumbers) {
-    if (!number.includes("@lid") && (number.length < 10 || number.length > 15)) {
+    const phonePart = number.includes("@s.whatsapp.net") ? digitsOnly(number.split("@")[0]) : number;
+    if (!number.includes("@lid") && (phonePart.length < 10 || phonePart.length > 15)) {
       last = { ok: false, status: 400, body: { error: "Número de WhatsApp inválido após normalização.", number }, path: "", endpoint: "validate-number", keySource: "none", attempts: allAttempts };
       continue;
     }
