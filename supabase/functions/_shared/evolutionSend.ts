@@ -64,12 +64,13 @@ export function chooseEvolutionTargets(phone: string | null | undefined, lid: st
   const lidTarget = normalizeEvolutionSendTarget(lid);
   const phoneJidTarget = toPhoneJid(phone);
   const phoneTarget = normalizeEvolutionSendTarget(phone);
-  // Evolution v2/Baileys pode aceitar o telefone puro com 201/PENDING e não
-  // entregar no aparelho. Tentar primeiro o JID explícito aumenta a chance de
-  // acertar o chat real; LID continua prioritário quando o webhook já capturou.
-  const targets = [lidTarget, phoneJidTarget, phoneTarget].filter(Boolean);
+  // O JID de telefone é o destino confiável. O LID fica por último porque a
+  // Evolution pode ter capturado o LID do próprio dono da instância (eco
+  // fromMe), o que faz a mensagem "enviar" com 201 e nunca chegar no cliente.
+  const targets = [phoneJidTarget, phoneTarget, lidTarget].filter(Boolean);
   return [...new Set(targets)];
 }
+
 
 export function extractEvolutionMessageId(body: any): string | null {
   return body?.key?.id ??
