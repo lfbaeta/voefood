@@ -4,6 +4,7 @@ import {
   chooseEvolutionTargets,
   extractEvolutionMessageId,
   formatEvolutionError,
+  getEvolutionOutgoingStatus,
   normalizeEvolutionTarget,
   sendEvolutionText,
 } from "../_shared/evolutionSend.ts";
@@ -348,7 +349,7 @@ serve(async (req) => {
         from_me: true,
         content_type: "text",
         text,
-        status: "sent",
+        status: resp.ok ? getEvolutionOutgoingStatus(resp.body) : "failed",
         sender_user_id: user.id,
         sent_at: new Date().toISOString(),
       });
@@ -403,7 +404,7 @@ serve(async (req) => {
       const waId = extractEvolutionMessageId(resp.body);
       await supaAdmin.from("wa_messages").update({
         wa_message_id: waId,
-        status: resp.ok ? "sent" : "failed",
+        status: resp.ok ? getEvolutionOutgoingStatus(resp.body) : "failed",
         send_error: resp.ok ? null : evoError(resp, "Falha ao enviar a mensagem."),
       }).eq("id", inserted.id);
       if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a mensagem."), response: resp.body, attempts: (resp as any).attempts }, 400);
@@ -442,7 +443,7 @@ serve(async (req) => {
         media_url: mediaUrl,
         media_mime: mime,
         media_filename: filename,
-        status: "sent",
+        status: resp.ok ? getEvolutionOutgoingStatus(resp.body) : "failed",
         sender_user_id: user.id,
         sent_at: new Date().toISOString(),
       }).select("id").single();

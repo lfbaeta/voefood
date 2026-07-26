@@ -180,9 +180,10 @@ async function configureWebhook(
       init: {
         method: "POST",
         body: JSON.stringify({
-          webhook: { enabled: true, url: webhookUrl, webhookByEvents: false, webhookBase64: false, events },
           url: webhookUrl,
           enabled: true,
+          webhookByEvents: false,
+          webhookBase64: false,
           events,
         }),
       },

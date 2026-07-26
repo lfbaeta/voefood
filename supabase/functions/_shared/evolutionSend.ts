@@ -63,6 +63,23 @@ export function extractEvolutionMessageId(body: any): string | null {
     null;
 }
 
+export function getEvolutionOutgoingStatus(body: any): "pending" | "sent" | "delivered" | "read" | "failed" {
+  const raw = String(
+    body?.status ??
+    body?.message?.status ??
+    body?.data?.status ??
+    body?.key?.status ??
+    "",
+  ).toLowerCase();
+
+  if (["pending", "pending_ack"].includes(raw)) return "pending";
+  if (["sent", "server_ack"].includes(raw)) return "sent";
+  if (["delivered", "delivery_ack", "played"].includes(raw)) return "delivered";
+  if (["read", "read_ack"].includes(raw)) return "read";
+  if (["failed", "error"].includes(raw)) return "failed";
+  return "pending";
+}
+
 function bodyPreview(body: any, limit = 1200): string {
   if (body == null) return "sem body";
   if (typeof body === "string") return body.slice(0, limit);

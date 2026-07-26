@@ -5,6 +5,7 @@ import {
   chooseEvolutionTargets,
   extractEvolutionMessageId,
   formatEvolutionError,
+  getEvolutionOutgoingStatus,
   normalizeEvolutionTarget,
   sendEvolutionText,
 } from "../_shared/evolutionSend.ts";
@@ -1962,7 +1963,7 @@ serve(async (req) => {
       await supa.from("wa_messages").insert({
         restaurant_id: conv.restaurant_id, conversation_id: conv.id, direction: "out", from_me: true,
         wa_message_id: extractEvolutionMessageId(sendRes.body),
-        content_type: "text", text: reply, status: sendRes.ok ? "sent" : "failed", sent_at: new Date().toISOString(),
+        content_type: "text", text: reply, status: sendRes.ok ? getEvolutionOutgoingStatus(sendRes.body) : "failed", sent_at: new Date().toISOString(),
         send_error: sendRes.ok ? null : sendErrorMessage(sendRes),
       });
       if (!sendRes.ok) return json({ ok: false, sent: false, error: sendErrorMessage(sendRes), blocked: "prompt_injection" }, 502);
@@ -2140,7 +2141,7 @@ serve(async (req) => {
       const waId = extractEvolutionMessageId(sendRes.body);
       await supa.from("wa_messages").update({
         wa_message_id: waId,
-        status: sendRes.ok ? "sent" : "failed",
+        status: sendRes.ok ? getEvolutionOutgoingStatus(sendRes.body) : "failed",
         send_error: sendRes.ok ? null : sendErrorMessage(sendRes),
       }).eq("id", pendingMessage.id);
     }

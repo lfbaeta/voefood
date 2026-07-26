@@ -154,9 +154,9 @@ function extractMedia(msg: any): { mime: string | null; filename: string | null;
 
 function normalizeDbStatus(status: any, fromMe: boolean): string {
   const s = String(status || "").toLowerCase();
-  // Evolution devolve "PENDING" no eco da própria mensagem enviada; para o
-  // sistema ela já saiu do servidor, então conta como "sent".
-  if (s === "pending" && fromMe) return "sent";
+  // Evolution v2 devolve "PENDING" quando apenas aceitou a mensagem na fila.
+  // Não marcar como enviada até chegar SEND_MESSAGE/MESSAGES_UPDATE com ACK real.
+  if (s === "pending" && fromMe) return "pending";
   if (["pending", "sent", "delivered", "read", "failed"].includes(s)) return s;
   if (["server_ack", "delivery_ack", "played"].includes(s)) return "delivered";
   if (["read_ack"].includes(s)) return "read";
