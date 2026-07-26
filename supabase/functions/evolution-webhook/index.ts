@@ -138,11 +138,15 @@ function extractMedia(msg: any): { mime: string | null; filename: string | null;
 
 function normalizeDbStatus(status: any, fromMe: boolean): string {
   const s = String(status || "").toLowerCase();
+  // Evolution devolve "PENDING" no eco da própria mensagem enviada; para o
+  // sistema ela já saiu do servidor, então conta como "sent".
+  if (s === "pending" && fromMe) return "sent";
   if (["pending", "sent", "delivered", "read", "failed"].includes(s)) return s;
   if (["server_ack", "delivery_ack", "played"].includes(s)) return "delivered";
   if (["read_ack"].includes(s)) return "read";
   return fromMe ? "sent" : "delivered";
 }
+
 
 function safeIsoFromEvolutionTs(ts: unknown): string {
   const fallback = new Date().toISOString();
