@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logWebhookEvent } from "../_shared/evolutionTelemetry.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -461,6 +462,18 @@ serve(async (req) => {
     const event = normalizeEvent(payload?.event || payload?.Event || payload?.type || payload?.Type);
     const data = payload?.data ?? payload?.Data ?? payload;
     const eventLower = event.toLowerCase().replace(/_/g, ".");
+
+    await logWebhookEvent(supa, {
+      restaurant_id: instance.restaurant_id,
+      instance_id: instance.id,
+      instance_name: instance.instance_name,
+      event: event || "unknown",
+      status: "received",
+      payload_summary: {
+        keys: Object.keys(payload ?? {}).slice(0, 12),
+        state: data?.state ?? data?.connection ?? null,
+      },
+    });
 
     if (["connection.update", "CONNECTION_UPDATE"].includes(event) || eventLower === "connection.update" || ["Connected", "PairSuccess", "Disconnected", "LoggedOut"].includes(event)) {
       const rawState = ["Connected", "PairSuccess"].includes(event)
