@@ -422,17 +422,21 @@ export async function sendEvolutionText(
           }
           const result = await postJson(cfg, endpoint.path, endpoint.body, key.value, key.source);
           result.endpoint = endpoint.label;
-          const queuedOnly = result.ok && isOnlyQueuedByEvolution(result.body);
-          allAttempts.push({ endpoint: endpoint.label, target: number, status: result.status, ok: result.ok && !queuedOnly, keySource: key.source, body: result.body });
+          // A Evolution v2 responde 201 com a key da mensagem e status PENDING;
+          // isso significa ACEITO. Reenviar aqui só gera mensagens duplicadas.
+          const accepted = result.ok && !!extractMessageId(result.body);
+          allAttempts.push({ endpoint: endpoint.label, target: number, status: result.status, ok: accepted, keySource: key.source, body: result.body });
           result.attempts = allAttempts;
-          last = queuedOnly ? asPendingFailure(result) : result;
+          last = result;
           last.attempts = allAttempts;
 
-          if (result.ok && !queuedOnly) return result;
-          if (queuedOnly) {
-            console.warn(`[evolution-send] ${endpoint.label} target=${number} returned PENDING only; trying alternate payload/target before reporting success.`);
-            break;
+          if (accepted) {
+            if (isOnlyQueuedByEvolution(result.body)) {
+              console.log(`[evolution-send] ${endpoint.label} target=${number} aceito com status PENDING (aguardando ACK do webhook).`);
+            }
+            return result;
           }
+          if (result.ok) break; // 2xx sem id de mensagem: tenta próximo formato
           if (!isTransient(result.status) || retry === 3) break;
           await sleep(600 * retry);
         }
