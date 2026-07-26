@@ -121,22 +121,6 @@ function isOnlyQueuedByEvolution(body: any): boolean {
   return getEvolutionOutgoingStatus(body) === "pending";
 }
 
-function asPendingFailure(result: EvolutionSendResult): EvolutionSendResult {
-  const remoteJid = result.body?.key?.remoteJid ?? result.body?.data?.key?.remoteJid ?? null;
-  const messageId = result.body?.key?.id ?? result.body?.data?.key?.id ?? null;
-  return {
-    ...result,
-    ok: false,
-    body: {
-      error: "A Evolution aceitou a mensagem, mas deixou em PENDING e não confirmou entrega ao celular.",
-      evolution_status: "PENDING",
-      key: result.body?.key ?? result.body?.data?.key ?? null,
-      remoteJid,
-      messageId,
-      response: result.body,
-    },
-  };
-}
 
 function bodyPreview(body: any, limit = 1200): string {
   if (body == null) return "sem body";
