@@ -1935,7 +1935,7 @@ serve(async (req) => {
     ];
     if (injectionPatterns.some((re) => re.test(inboundText))) {
       const reply = "Posso ajudar com cardápio, pedidos, taxa e horário 🙂 Pra desconto, só com cupom oficial — quer ver os que estão ativos?";
-      await sendWhatsApp(cfg.server_url, evo_api_key, inst.instance_name, digitsOnly(contact.phone_e164), reply);
+      await sendWhatsApp(cfg.server_url, evo_api_key, inst.instance_name, sendTarget, reply);
       await supa.from("wa_messages").insert({
         restaurant_id: conv.restaurant_id, conversation_id: conv.id, direction: "out", from_me: true,
         content_type: "text", text: reply, status: "sent", sent_at: new Date().toISOString(),
@@ -2072,7 +2072,7 @@ serve(async (req) => {
     if (!finalText) return skipped("no_reply");
 
     // Split in bubbles, dedupe, send sequentially with small typing delay
-    const number = digitsOnly(contact.phone_e164);
+    const number = sendTarget;
     const bubbles = splitBubbles(finalText, !!agent.split_messages);
     const typingDelay = Math.max(0, Math.min(Number(agent.typing_delay_ms ?? 800), 5000));
     let anyFailed = false;
