@@ -275,6 +275,27 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
   const lidJid = msg.lidJid ?? (String(msg.remoteJid).includes("@lid") ? String(msg.remoteJid) : null);
   if (!phone && !lidJid) return;
 
+  if (msg.fromMe && msg.waMsgId) {
+    const { data: outbound } = await supa
+      .from("wa_messages")
+      .select("id, status")
+      .eq("wa_message_id", msg.waMsgId)
+      .eq("restaurant_id", instance.restaurant_id)
+      .maybeSingle();
+    if (outbound) {
+      const rank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3 };
+      const cur = rank[String(outbound.status ?? "")] ?? 0;
+      const next = rank[msg.status] ?? 0;
+      if (msg.status === "failed" || next > cur) {
+        await supa.from("wa_messages").update({ status: msg.status }).eq("id", outbound.id);
+      }
+      return;
+    }
+
+    console.warn("[evolution-webhook] Ignorando eco outbound sem mensagem local correspondente", JSON.stringify({ waMsgId: msg.waMsgId, status: msg.status, remoteJid: msg.remoteJid }).slice(0, 500));
+    return;
+  }
+
   // Auto-heal: se mensagens estão chegando, a instância está de fato conectada.
   if (instance.status !== "connected") {
     await supa.from("evolution_instances").update({
