@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { formatEvolutionError, normalizeEvolutionUrl, sendEvolutionText } from "../_shared/evolutionSend.ts";
+import { chooseEvolutionTargets, digitsOnly, formatEvolutionError, normalizeEvolutionUrl, sendEvolutionText } from "../_shared/evolutionSend.ts";
 import { logSendAttempt } from "../_shared/evolutionTelemetry.ts";
 
 const corsHeaders = {
@@ -101,20 +101,34 @@ serve(async (req) => {
       if (!serverUrl || !globalKey) return json({ error: "Evolution não configurada." }, 400);
 
       const text = String(payload?.text || "✅ Teste de envio do painel (health check).");
+      const toDigits = digitsOnly(to);
+      const { data: knownContact } = toDigits
+        ? await supa
+            .from("wa_contacts")
+            .select("phone_e164, wa_lid")
+            .eq("restaurant_id", restaurantId)
+            .or(`phone_e164.eq.${toDigits},phone_e164.ilike.%${toDigits.slice(-10)}%`)
+            .order("updated_at", { ascending: false, nullsFirst: false })
+            .limit(1)
+            .maybeSingle()
+        : { data: null as any };
+      const targets = knownContact?.phone_e164 || knownContact?.wa_lid
+        ? chooseEvolutionTargets(knownContact.phone_e164 ?? to, knownContact.wa_lid)
+        : to;
       const result = await sendEvolutionText({
         serverUrl,
         globalApiKey: globalKey,
         instanceToken: inst.instance_token,
         instanceName: inst.instance_name,
         instanceUuid: inst.instance_uuid,
-      }, to, text);
+      }, targets, text);
 
       await logSendAttempt(supa, {
         restaurant_id: restaurantId,
         instance_id: inst.id,
         instance_name: inst.instance_name,
         source: "health-test",
-        target: to,
+        target: Array.isArray(targets) ? targets.join(",") : targets,
         preview: text,
         result,
       });
