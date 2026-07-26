@@ -17,6 +17,7 @@ export type EvolutionSendConfig = {
   debug?: boolean;
 };
 
+const DEFAULT_TEXT_DELAY_MS = 1200;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export function normalizeEvolutionUrl(value: string): string {
@@ -90,18 +91,28 @@ export function extractEvolutionMessageId(body: any): string | null {
 }
 
 export function getEvolutionOutgoingStatus(body: any): "pending" | "sent" | "delivered" | "read" | "failed" {
-  const raw = String(
-    body?.status ??
+  const rawValue = body?.status ??
     body?.message?.status ??
     body?.data?.status ??
     body?.key?.status ??
-    "",
+    body?.update?.status ??
+    "";
+
+  if (typeof rawValue === "number") {
+    if (rawValue <= 0) return "pending";
+    if (rawValue === 1) return "sent";
+    if (rawValue === 2) return "delivered";
+    if (rawValue >= 3) return "read";
+  }
+
+  const raw = String(
+    rawValue,
   ).toLowerCase();
 
-  if (["pending", "pending_ack"].includes(raw)) return "pending";
-  if (["sent", "server_ack"].includes(raw)) return "sent";
-  if (["delivered", "delivery_ack", "played"].includes(raw)) return "delivered";
-  if (["read", "read_ack"].includes(raw)) return "read";
+  if (["pending", "pending_ack", "0"].includes(raw)) return "pending";
+  if (["sent", "server_ack", "1"].includes(raw)) return "sent";
+  if (["delivered", "delivery_ack", "played", "2"].includes(raw)) return "delivered";
+  if (["read", "read_ack", "3", "4"].includes(raw)) return "read";
   if (["failed", "error"].includes(raw)) return "failed";
   return "pending";
 }
@@ -242,6 +253,38 @@ async function postJson(
   return { ok: response.ok, status: response.status, body: parsed, path, endpoint: path, keySource, attempts: [] };
 }
 
+async function sendPresence(
+  cfg: EvolutionSendConfig,
+  number: string,
+  key: string,
+): Promise<void> {
+  const instance = encodeURIComponent(cfg.instanceName);
+  const url = `${normalizeEvolutionUrl(cfg.serverUrl)}/chat/sendPresence/${instance}`;
+  const payload = {
+    number,
+    options: { number, delay: DEFAULT_TEXT_DELAY_MS, presence: "composing" },
+  };
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        instance: cfg.instanceName,
+        instanceName: cfg.instanceName,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (cfg.debug) {
+      const preview = await response.text().catch(() => "");
+      console.log(`[evolution-presence] status=${response.status} body=${preview.slice(0, 500)}`);
+    }
+  } catch (error) {
+    if (cfg.debug) console.log(`[evolution-presence] ignored: ${(error as Error).message}`);
+  }
+}
+
 // Variações de número brasileiro (com/sem o 9 extra em celulares).
 export function brazilPhoneVariants(phone: string): string[] {
   const digits = digitsOnly(phone);
@@ -341,16 +384,31 @@ export async function sendEvolutionText(
       last = { ok: false, status: 400, body: { error: "Número de WhatsApp inválido após normalização.", number }, path: "", endpoint: "validate-number", keySource: "none", attempts: allAttempts };
       continue;
     }
+    const apiNumber = number.includes("@lid") ? number : phonePart;
 
     const endpoints = [
-      { label: "v2-sendText", path: `/message/sendText/${instance}`, body: { number, text }, preferredKey: "global" as const },
-      { label: "v2-sendMessage", path: `/message/sendMessage/${instance}`, body: { number, text }, preferredKey: "global" as const },
-      { label: "go-send-text", path: "/send/text", body: { number, text }, preferredKey: "instance" as const },
+      {
+        label: "v2-sendText",
+        path: `/message/sendText/${instance}`,
+        body: { number: apiNumber, text, delay: DEFAULT_TEXT_DELAY_MS, linkPreview: false },
+        preferredKey: "global" as const,
+      },
+      {
+        label: "v2-sendText-textMessage",
+        path: `/message/sendText/${instance}`,
+        body: { number: apiNumber, textMessage: { text }, delay: DEFAULT_TEXT_DELAY_MS, linkPreview: false },
+        preferredKey: "global" as const,
+      },
+      {
+        label: "v2-sendMessage",
+        path: `/message/sendMessage/${instance}`,
+        body: { number: apiNumber, text, textMessage: { text }, delay: DEFAULT_TEXT_DELAY_MS, linkPreview: false },
+        preferredKey: "global" as const,
+      },
+      { label: "go-send-text", path: "/send/text", body: { number: apiNumber, text }, preferredKey: "instance" as const },
     ];
-    let queuedOnlyForTarget = false;
 
     for (const endpoint of endpoints) {
-      if (queuedOnlyForTarget) break;
       const keys = keyCandidates(cfg, endpoint.preferredKey);
       if (!keys.length) {
         last = { ok: false, status: 401, body: { error: "API key da Evolution ausente." }, path: endpoint.path, endpoint: endpoint.label, keySource: "none", attempts: allAttempts };
@@ -359,6 +417,9 @@ export async function sendEvolutionText(
 
       for (const key of keys) {
         for (let retry = 1; retry <= 3; retry++) {
+          if (endpoint.label.startsWith("v2-") && retry === 1) {
+            await sendPresence(cfg, apiNumber, key.value);
+          }
           const result = await postJson(cfg, endpoint.path, endpoint.body, key.value, key.source);
           result.endpoint = endpoint.label;
           const queuedOnly = result.ok && isOnlyQueuedByEvolution(result.body);
@@ -369,8 +430,7 @@ export async function sendEvolutionText(
 
           if (result.ok && !queuedOnly) return result;
           if (queuedOnly) {
-            console.warn(`[evolution-send] ${endpoint.label} target=${number} returned PENDING only; trying next target before reporting success.`);
-            queuedOnlyForTarget = true;
+            console.warn(`[evolution-send] ${endpoint.label} target=${number} returned PENDING only; trying alternate payload/target before reporting success.`);
             break;
           }
           if (!isTransient(result.status) || retry === 3) break;
