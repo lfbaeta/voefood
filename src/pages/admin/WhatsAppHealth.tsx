@@ -43,7 +43,14 @@ type Attempt = {
   id: string; created_at: string; source: string; target: string | null; endpoint: string | null;
   http_status: number | null; ok: boolean; error: string | null; preview: string | null;
   conversation_id: string | null; order_id: number | null; instance_name: string | null;
+  attempts?: Array<{ endpoint?: string; target?: string; status?: number; ok?: boolean; keySource?: string }> | null;
 };
+
+function isPendingAttempt(a: Attempt) {
+  const error = String(a.error ?? '').toLowerCase();
+  const attempts = Array.isArray(a.attempts) ? a.attempts : [];
+  return error.includes('pending') || attempts.some((item) => item.status === 201 && item.ok === false);
+}
 
 function fmt(value?: string | null) {
   if (!value) return '—';
@@ -76,7 +83,7 @@ export default function WhatsAppHealth() {
       supabase.functions.invoke('evolution-health', { body: { action: 'status', restaurant_id: restaurantId } }),
       supabase
         .from('evolution_send_attempts')
-        .select('id, created_at, source, target, endpoint, http_status, ok, error, preview, conversation_id, order_id, instance_name')
+        .select('id, created_at, source, target, endpoint, http_status, ok, error, preview, conversation_id, order_id, instance_name, attempts')
         .eq('restaurant_id', restaurantId)
         .order('created_at', { ascending: false })
         .limit(100),
@@ -110,7 +117,7 @@ export default function WhatsAppHealth() {
         variant: 'destructive',
       });
     } else {
-      toast({ title: 'Mensagem de teste enviada', description: `Endpoint: ${(data as any).endpoint}` });
+      toast({ title: 'Mensagem confirmada', description: `Endpoint: ${(data as any).endpoint}` });
     }
     load();
   }
@@ -154,8 +161,13 @@ export default function WhatsAppHealth() {
               <td className="py-2 pr-3 text-xs">{a.endpoint ?? '—'}{a.http_status ? ` (${a.http_status})` : ''}</td>
               <td className="py-2 pr-3">
                 {a.ok
-                  ? <Badge className="bg-primary/15 text-primary hover:bg-primary/15">Enviado</Badge>
-                  : <div className="space-y-1"><Badge variant="destructive">Falhou</Badge><p className="text-xs text-muted-foreground max-w-[320px]">{a.error}</p></div>}
+                  ? <Badge className="bg-primary/15 text-primary hover:bg-primary/15">Confirmado</Badge>
+                  : <div className="space-y-1">
+                      <Badge variant={isPendingAttempt(a) ? 'secondary' : 'destructive'}>
+                        {isPendingAttempt(a) ? 'Pendente' : 'Falhou'}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground max-w-[320px]">{a.error}</p>
+                    </div>}
               </td>
             </tr>
           ))}
