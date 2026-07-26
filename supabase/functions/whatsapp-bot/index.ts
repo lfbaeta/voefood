@@ -5,6 +5,7 @@ import {
   chooseEvolutionTargets,
   extractEvolutionMessageId,
   formatEvolutionError,
+  getEvolutionOutgoingStatus,
   normalizeEvolutionTarget,
   sendEvolutionText,
 } from "../_shared/evolutionSend.ts";
@@ -1102,7 +1103,7 @@ async function execTool(
           content_type: "image",
           text: caption,
           media_url: p.image_url,
-          status: "sent",
+          status: getEvolutionOutgoingStatus(sent.body),
           sent_at: new Date().toISOString(),
         });
         sentList.push({ id: p.id, nome: p.name, enviado: true });
@@ -1137,7 +1138,7 @@ async function execTool(
         from_me: true,
         content_type: "text",
         text,
-        status: "sent",
+        status: getEvolutionOutgoingStatus(sent.body),
         sent_at: new Date().toISOString(),
       });
       return { success: true, output: { enviado: true, url } };
@@ -1183,7 +1184,7 @@ async function execTool(
         from_me: true,
         content_type: "text",
         text,
-        status: "sent",
+        status: getEvolutionOutgoingStatus(sent.body),
         sent_at: new Date().toISOString(),
       });
       return { success: true, output: { enviado: true, url, produto: prod.name } };
@@ -1934,6 +1935,9 @@ serve(async (req) => {
     const latestOutbound = [...ordered].reverse().find((m: any) =>
       m.direction === "out" && ["sent", "delivered", "read"].includes(String(m.status || ""))
     );
+    const latestQueuedOutbound = [...ordered].reverse().find((m: any) =>
+      m.direction === "out" && ["pending", "sent", "delivered", "read"].includes(String(m.status || ""))
+    );
     if (!latestInbound?.id) return skipped("no_inbound_message");
     if (latestOutbound?.created_at && new Date(latestOutbound.created_at) > new Date(latestInbound.created_at)) {
       return skipped("already_replied");
@@ -1962,7 +1966,7 @@ serve(async (req) => {
       await supa.from("wa_messages").insert({
         restaurant_id: conv.restaurant_id, conversation_id: conv.id, direction: "out", from_me: true,
         wa_message_id: extractEvolutionMessageId(sendRes.body),
-        content_type: "text", text: reply, status: sendRes.ok ? "sent" : "failed", sent_at: new Date().toISOString(),
+        content_type: "text", text: reply, status: sendRes.ok ? getEvolutionOutgoingStatus(sendRes.body) : "failed", sent_at: new Date().toISOString(),
         send_error: sendRes.ok ? null : sendErrorMessage(sendRes),
       });
       if (!sendRes.ok) return json({ ok: false, sent: false, error: sendErrorMessage(sendRes), blocked: "prompt_injection" }, 502);
@@ -1990,7 +1994,7 @@ serve(async (req) => {
       restaurant_id: conv.restaurant_id,
     });
     if (claimError) {
-      if (claimError.code === "23505" && latestOutbound?.created_at && new Date(latestOutbound.created_at) > new Date(latestInbound.created_at)) {
+      if (claimError.code === "23505" && latestQueuedOutbound?.created_at && new Date(latestQueuedOutbound.created_at) > new Date(latestInbound.created_at)) {
         return skipped("duplicate_claim");
       }
       if (claimError.code === "23505") {
@@ -2140,7 +2144,7 @@ serve(async (req) => {
       const waId = extractEvolutionMessageId(sendRes.body);
       await supa.from("wa_messages").update({
         wa_message_id: waId,
-        status: sendRes.ok ? "sent" : "failed",
+        status: sendRes.ok ? getEvolutionOutgoingStatus(sendRes.body) : "failed",
         send_error: sendRes.ok ? null : sendErrorMessage(sendRes),
       }).eq("id", pendingMessage.id);
     }
