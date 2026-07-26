@@ -1,6 +1,8 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Play, Star, Users, ShoppingBag, TrendingUp } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
+import heroMascot from '@/assets/hero-phone-mascot.png.asset.json';
+
 
 interface HeroSectionProps {
   title: string;
@@ -158,111 +160,20 @@ export function HeroSection({ title, subtitle, primaryColor, whatsappLink, onCta
             </div>
           </div>
 
-          {/* Right Content - Phone Mockup */}
+          {/* Right Content - Mascot */}
           <div className="relative flex justify-center items-center mt-6 lg:mt-0">
-            <div className="relative scale-[0.45] sm:scale-[0.65] md:scale-[0.8] lg:scale-100 origin-top">
-              {/* Main Phone */}
-              <div className="relative z-20 bg-gradient-to-br from-gray-900 to-gray-800 rounded-[3rem] p-2 shadow-2xl transform hover:scale-105 transition-transform duration-500">
-                <div className="bg-background rounded-[2.5rem] overflow-hidden w-72 h-[580px]">
-                  {/* Phone Screen Content */}
-                  <div className="h-full flex flex-col">
-                    {/* Status Bar */}
-                    <div className="h-12 flex items-center justify-center bg-muted/50 rounded-t-[2.5rem]">
-                      <div className="w-24 h-6 bg-gray-900 rounded-full" />
-                    </div>
-                    
-                    {/* App Content */}
-                    <div className="flex-1 p-4 space-y-4">
-                      {/* Header */}
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full" style={{ backgroundColor: `hsl(${primaryColor} / 0.2)` }} />
-                        <div>
-                          <div className="h-4 w-32 rounded bg-foreground/20" />
-                          <div className="h-3 w-20 rounded bg-muted-foreground/20 mt-1" />
-                        </div>
-                      </div>
-                      
-                      {/* Categories */}
-                      <div className="flex gap-2">
-                        {[1, 2, 3].map((i) => (
-                          <div 
-                            key={i} 
-                            className="h-8 px-4 rounded-full flex items-center justify-center text-xs font-medium"
-                            style={{ 
-                              backgroundColor: i === 1 ? `hsl(${primaryColor})` : 'hsl(var(--muted))',
-                              color: i === 1 ? 'white' : 'inherit'
-                            }}
-                          >
-                            {['Lanches', 'Pizzas', 'Bebidas'][i - 1]}
-                          </div>
-                        ))}
-                      </div>
-                      
-                      {/* Products */}
-                      <div className="space-y-3">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="flex gap-3 p-3 rounded-xl bg-muted/50">
-                            <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-primary/30 to-primary/50" />
-                            <div className="flex-1">
-                              <div className="h-4 w-24 rounded bg-foreground/20" />
-                              <div className="h-3 w-16 rounded bg-muted-foreground/20 mt-1" />
-                              <div className="h-5 w-16 rounded mt-2" style={{ backgroundColor: `hsl(${primaryColor} / 0.2)` }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Bottom Nav */}
-                    <div className="h-16 border-t border-border flex items-center justify-around px-6">
-                      {[ShoppingBag, Users].map((Icon, i) => (
-                        <div key={i} className="w-10 h-10 rounded-full flex items-center justify-center bg-muted">
-                          <Icon className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Secondary Phone - hidden on small screens */}
-              <div className="absolute -right-16 top-20 z-10 bg-gradient-to-br from-gray-800 to-gray-700 rounded-[2.5rem] p-2 shadow-xl transform rotate-6 scale-75 opacity-60 hidden md:block">
-                <div className="bg-background rounded-[2rem] overflow-hidden w-56 h-[400px]">
-                  <div className="h-full bg-gradient-to-br from-muted to-muted/50" />
-                </div>
-              </div>
-
-              {/* Floating Elements */}
-              <div 
-                className="absolute -left-8 top-16 z-30 p-3 md:p-4 rounded-2xl shadow-lg animate-bounce bg-background hidden sm:block"
-                style={{ animationDuration: '3s' }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `hsl(${primaryColor})` }}>
-                    <ShoppingBag className="h-4 w-4 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">Novo Pedido!</p>
-                    <p className="text-xs text-muted-foreground">R$ 87,90</p>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                className="absolute -right-4 bottom-32 z-30 p-3 md:p-4 rounded-2xl shadow-lg animate-bounce bg-background hidden sm:block"
-                style={{ animationDuration: '4s', animationDelay: '1s' }}
-              >
-                <div className="flex items-center gap-2">
-                  <div className="flex -space-x-2">
-                    {[1, 2, 3].map((i) => (
-                      <div key={i} className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 border-2 border-background" />
-                    ))}
-                  </div>
-                  <p className="text-xs font-medium">+12 hoje</p>
-                </div>
-              </div>
-            </div>
+            <div
+              className="absolute w-64 h-64 md:w-96 md:h-96 rounded-full blur-3xl opacity-30 animate-pulse"
+              style={{ backgroundColor: `hsl(${primaryColor})` }}
+            />
+            <img
+              src={heroMascot.url}
+              alt="Aplicativo de pedidos com entrega rápida"
+              loading="lazy"
+              className="relative z-10 w-64 sm:w-80 md:w-[26rem] lg:w-[30rem] h-auto drop-shadow-2xl animate-float"
+            />
           </div>
+
         </div>
       </div>
     </section>
