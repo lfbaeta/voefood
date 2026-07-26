@@ -43,6 +43,13 @@ export function chooseEvolutionTarget(phone: string | null | undefined, lid: str
   return normalizeEvolutionTarget(phone);
 }
 
+export function chooseEvolutionTargets(phone: string | null | undefined, lid: string | null | undefined): string[] {
+  const phoneTarget = normalizeEvolutionTarget(phone);
+  const lidTarget = normalizeEvolutionTarget(lid);
+  const targets = [lidTarget, phoneTarget].filter(Boolean);
+  return [...new Set(targets)];
+}
+
 export function extractEvolutionMessageId(body: any): string | null {
   return body?.key?.id ??
     body?.message?.key?.id ??
@@ -169,15 +176,16 @@ async function postJson(
 
 export async function sendEvolutionText(
   cfg: EvolutionSendConfig,
-  to: string,
+  to: string | string[],
   text: string,
 ): Promise<EvolutionSendResult> {
-  const number = normalizeEvolutionTarget(to);
-  if (!number || (!number.includes("@lid") && (number.length < 10 || number.length > 15))) {
+  const numbers = (Array.isArray(to) ? to : [to]).map(normalizeEvolutionTarget).filter(Boolean);
+  const uniqueNumbers = [...new Set(numbers)];
+  if (!uniqueNumbers.length) {
     return {
       ok: false,
       status: 400,
-      body: { error: "Número de WhatsApp inválido após normalização.", number },
+      body: { error: "Número de WhatsApp inválido após normalização.", number: "" },
       path: "",
       endpoint: "",
       keySource: "none",
@@ -186,37 +194,44 @@ export async function sendEvolutionText(
   }
 
   const instance = encodeURIComponent(cfg.instanceName);
-  const endpoints = [
-    { label: "v2-sendText", path: `/message/sendText/${instance}`, body: { number, text }, preferredKey: "global" as const },
-    { label: "v2-sendMessage", path: `/message/sendMessage/${instance}`, body: { number, text }, preferredKey: "global" as const },
-    { label: "go-send-text", path: "/send/text", body: { number, text }, preferredKey: "instance" as const },
-  ];
-
   const allAttempts: EvolutionSendResult["attempts"] = [];
   let last: EvolutionSendResult | null = null;
 
-  for (const endpoint of endpoints) {
-    const keys = keyCandidates(cfg, endpoint.preferredKey);
-    if (!keys.length) {
-      last = { ok: false, status: 401, body: { error: "API key da Evolution ausente." }, path: endpoint.path, endpoint: endpoint.label, keySource: "none", attempts: allAttempts };
+  for (const number of uniqueNumbers) {
+    if (!number.includes("@lid") && (number.length < 10 || number.length > 15)) {
+      last = { ok: false, status: 400, body: { error: "Número de WhatsApp inválido após normalização.", number }, path: "", endpoint: "validate-number", keySource: "none", attempts: allAttempts };
       continue;
     }
 
-    for (const key of keys) {
-      for (let retry = 1; retry <= 3; retry++) {
-        const result = await postJson(cfg, endpoint.path, endpoint.body, key.value, key.source);
-        result.endpoint = endpoint.label;
-        allAttempts.push({ endpoint: endpoint.label, status: result.status, ok: result.ok, keySource: key.source, body: result.body });
-        result.attempts = allAttempts;
-        last = result;
+    const endpoints = [
+      { label: "v2-sendText", path: `/message/sendText/${instance}`, body: { number, text }, preferredKey: "global" as const },
+      { label: "v2-sendMessage", path: `/message/sendMessage/${instance}`, body: { number, text }, preferredKey: "global" as const },
+      { label: "go-send-text", path: "/send/text", body: { number, text }, preferredKey: "instance" as const },
+    ];
 
-        if (result.ok) return result;
-        if (!isTransient(result.status) || retry === 3) break;
-        await sleep(600 * retry);
+    for (const endpoint of endpoints) {
+      const keys = keyCandidates(cfg, endpoint.preferredKey);
+      if (!keys.length) {
+        last = { ok: false, status: 401, body: { error: "API key da Evolution ausente." }, path: endpoint.path, endpoint: endpoint.label, keySource: "none", attempts: allAttempts };
+        continue;
       }
 
-      if (last && [401, 403].includes(last.status)) continue;
-      if (last && ![404, 400, 422].includes(last.status)) break;
+      for (const key of keys) {
+        for (let retry = 1; retry <= 3; retry++) {
+          const result = await postJson(cfg, endpoint.path, endpoint.body, key.value, key.source);
+          result.endpoint = endpoint.label;
+          allAttempts.push({ endpoint: endpoint.label, status: result.status, ok: result.ok, keySource: key.source, body: result.body });
+          result.attempts = allAttempts;
+          last = result;
+
+          if (result.ok) return result;
+          if (!isTransient(result.status) || retry === 3) break;
+          await sleep(600 * retry);
+        }
+
+        if (last && [401, 403].includes(last.status)) continue;
+        if (last && ![404, 400, 422].includes(last.status)) break;
+      }
     }
   }
 
