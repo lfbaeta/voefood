@@ -46,7 +46,7 @@ export function chooseEvolutionTarget(phone: string | null | undefined, lid: str
 export function chooseEvolutionTargets(phone: string | null | undefined, lid: string | null | undefined): string[] {
   const phoneTarget = normalizeEvolutionTarget(phone);
   const lidTarget = normalizeEvolutionTarget(lid);
-  const targets = [lidTarget, phoneTarget].filter(Boolean);
+  const targets = [phoneTarget, lidTarget].filter(Boolean);
   return [...new Set(targets)];
 }
 
