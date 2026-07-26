@@ -59,10 +59,13 @@ export function ImageUpload({
     setIsUploading(true);
 
     try {
-      // Create unique filename
+      // Create unique filename scoped to the restaurant folder
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = fileName;
+      if (bucket === 'product-images' && !restaurantId) {
+        throw new Error('Estabelecimento não identificado para o upload.');
+      }
+      const filePath = bucket === 'product-images' ? `${restaurantId}/${fileName}` : fileName;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
