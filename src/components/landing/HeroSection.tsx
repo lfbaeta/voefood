@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Play, Star, Users, ShoppingBag, TrendingUp } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
-import heroMascot from '@/assets/hero-phone-mascot.png.asset.json';
+import heroMascot from '@/assets/hero-phone-mascot-hd.png.asset.json';
 
 
 interface HeroSectionProps {
