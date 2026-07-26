@@ -55,21 +55,25 @@ function toPhoneJid(value: string | null | undefined): string {
 }
 
 export function chooseEvolutionTarget(phone: string | null | undefined, lid: string | null | undefined): string {
+  const phoneJid = toPhoneJid(phone);
+  if (phoneJid) return phoneJid;
   const lidTarget = normalizeEvolutionSendTarget(lid);
   if (lidTarget.includes("@lid")) return lidTarget;
-  return toPhoneJid(phone) || normalizeEvolutionSendTarget(phone);
+  return normalizeEvolutionSendTarget(phone);
 }
+
 
 export function chooseEvolutionTargets(phone: string | null | undefined, lid: string | null | undefined): string[] {
   const lidTarget = normalizeEvolutionSendTarget(lid);
   const phoneJidTarget = toPhoneJid(phone);
   const phoneTarget = normalizeEvolutionSendTarget(phone);
-  // Evolution v2/Baileys pode aceitar o telefone puro com 201/PENDING e não
-  // entregar no aparelho. Tentar primeiro o JID explícito aumenta a chance de
-  // acertar o chat real; LID continua prioritário quando o webhook já capturou.
-  const targets = [lidTarget, phoneJidTarget, phoneTarget].filter(Boolean);
+  // O JID de telefone é o destino confiável. O LID fica por último porque a
+  // Evolution pode ter capturado o LID do próprio dono da instância (eco
+  // fromMe), o que faz a mensagem "enviar" com 201 e nunca chegar no cliente.
+  const targets = [phoneJidTarget, phoneTarget, lidTarget].filter(Boolean);
   return [...new Set(targets)];
 }
+
 
 export function extractEvolutionMessageId(body: any): string | null {
   return body?.key?.id ??
@@ -212,14 +216,81 @@ async function postJson(
   return { ok: response.ok, status: response.status, body: parsed, path, endpoint: path, keySource, attempts: [] };
 }
 
+// Variações de número brasileiro (com/sem o 9 extra em celulares).
+export function brazilPhoneVariants(phone: string): string[] {
+  const digits = digitsOnly(phone);
+  const out = new Set<string>([digits]);
+  if (digits.startsWith("55")) {
+    const ddd = digits.slice(2, 4);
+    const rest = digits.slice(4);
+    if (rest.length === 9 && rest.startsWith("9")) out.add(`55${ddd}${rest.slice(1)}`);
+    if (rest.length === 8) out.add(`55${ddd}9${rest}`);
+  }
+  return [...out].filter((n) => n.length >= 10 && n.length <= 15);
+}
+
+/**
+ * Pergunta à Evolution qual é o JID real do número (endpoint whatsappNumbers).
+ * Sem isso, a Evolution v2 aceita o envio com 201/PENDING e nunca entrega
+ * quando o JID informado não corresponde ao registrado no WhatsApp.
+ */
+export async function resolveEvolutionJid(
+  cfg: EvolutionSendConfig,
+  phone: string | null | undefined,
+): Promise<string | null> {
+  const variants = brazilPhoneVariants(String(phone || ""));
+  if (!variants.length) return null;
+  const instance = encodeURIComponent(cfg.instanceName);
+  const keys = keyCandidates(cfg, "global");
+  for (const key of keys) {
+    for (const path of [`/chat/whatsappNumbers/${instance}`, `/chat/whatsappNumbers`]) {
+      try {
+        const res = await fetch(`${normalizeEvolutionUrl(cfg.serverUrl)}${path}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: key.value,
+            Authorization: `Bearer ${key.value}`,
+            instance: cfg.instanceName,
+          },
+          body: JSON.stringify({ numbers: variants }),
+        });
+        const text = await res.text();
+        let parsed: any = null;
+        try { parsed = text ? JSON.parse(text) : null; } catch { parsed = text; }
+        if (!res.ok) continue;
+        const list: any[] = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.data) ? parsed.data : []);
+        const hit = list.find((item) => item?.exists === true || item?.exists === "true");
+        const jid = String(hit?.jid ?? hit?.number ?? "").trim();
+        console.log(`[evolution-resolve] variants=${variants.join(",")} jid=${jid || "none"}`);
+        if (jid) {
+          return jid.includes("@") ? jid : `${digitsOnly(jid)}@s.whatsapp.net`;
+        }
+      } catch (error) {
+        console.log(`[evolution-resolve] falhou em ${path}: ${(error as Error).message}`);
+      }
+    }
+  }
+  return null;
+}
+
 export async function sendEvolutionText(
   cfg: EvolutionSendConfig,
   to: string | string[],
   text: string,
 ): Promise<EvolutionSendResult> {
   const numbers = (Array.isArray(to) ? to : [to]).map(normalizeEvolutionSendTarget).filter(Boolean);
-  const uniqueNumbers = [...new Set(numbers)];
+  let uniqueNumbers = [...new Set(numbers)];
+
+  // Resolve o JID real antes de tentar qualquer envio "às cegas".
+  const phoneSeed = uniqueNumbers.find((n) => !n.includes("@lid"));
+  if (phoneSeed) {
+    const resolved = await resolveEvolutionJid(cfg, phoneSeed.split("@")[0]);
+    if (resolved) uniqueNumbers = [...new Set([resolved, ...uniqueNumbers])];
+  }
+
   if (!uniqueNumbers.length) {
+
     return {
       ok: false,
       status: 400,
