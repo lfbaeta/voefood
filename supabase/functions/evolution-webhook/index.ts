@@ -253,15 +253,22 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
   if (msg.waMsgId) {
     const { data: existing } = await supa
       .from("wa_messages")
-      .select("id")
+      .select("id, status")
       .eq("wa_message_id", msg.waMsgId)
       .eq("restaurant_id", instance.restaurant_id)
       .maybeSingle();
     if (existing) {
-      await supa.from("wa_messages").update({ status: msg.status }).eq("id", existing.id);
+      // Nunca rebaixar o status (ex.: "sent" -> "pending" no eco do Evolution)
+      const rank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3 };
+      const cur = rank[String(existing.status ?? "")] ?? 0;
+      const next = rank[msg.status] ?? 0;
+      if (msg.status === "failed" || next > cur) {
+        await supa.from("wa_messages").update({ status: msg.status }).eq("id", existing.id);
+      }
       return;
     }
   }
+
 
   const { data: existingContact } = await supa
     .from("wa_contacts")
