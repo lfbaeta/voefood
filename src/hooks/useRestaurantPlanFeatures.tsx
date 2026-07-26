@@ -16,7 +16,7 @@ export function useRestaurantPlanFeatures() {
       if (!restaurantId) return null;
 
       const { data: rest, error: rErr } = await supabase
-        .from('restaurants')
+        .from('restaurants_public')
         .select('plan_id')
         .eq('id', restaurantId)
         .maybeSingle();
