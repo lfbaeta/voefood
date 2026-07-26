@@ -172,8 +172,25 @@ async function configureWebhook(
 
   const attempts: Array<{ label: string; path: string; init: RequestInit }> = [];
 
-  // Evolution API v2 (Node) — PUT /webhook/set/{instanceName}
+  // Evolution API v2.2+ — POST /webhook/set/{instanceName} com payload aninhado
   if (instanceName) {
+    attempts.push({
+      label: "v2-name-nested",
+      path: `/webhook/set/${encodeURIComponent(instanceName)}`,
+      init: {
+        method: "POST",
+        body: JSON.stringify({
+          webhook: {
+            enabled: true,
+            url: webhookUrl,
+            byEvents: false,
+            base64: false,
+            events,
+          },
+        }),
+      },
+    });
+    // Evolution API v2.0/2.1 — payload plano
     attempts.push({
       label: "v2-name",
       path: `/webhook/set/${encodeURIComponent(instanceName)}`,
@@ -189,6 +206,7 @@ async function configureWebhook(
       },
     });
   }
+
 
   // Evolution Go — POST /webhook/set with header instanceId
   attempts.push({
