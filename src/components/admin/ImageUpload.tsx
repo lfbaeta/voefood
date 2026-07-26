@@ -3,6 +3,7 @@ import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useEffectiveRestaurantId } from '@/hooks/useEffectiveRestaurantId';
 import { cn } from '@/lib/utils';
 
 interface ImageUploadProps {
@@ -24,6 +25,7 @@ export function ImageUpload({
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl || null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { restaurantId } = useEffectiveRestaurantId();
 
   // Sync previewUrl with currentUrl prop changes
   useEffect(() => {
@@ -57,10 +59,13 @@ export function ImageUpload({
     setIsUploading(true);
 
     try {
-      // Create unique filename
+      // Create unique filename scoped to the restaurant folder
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = fileName;
+      if (bucket === 'product-images' && !restaurantId) {
+        throw new Error('Estabelecimento não identificado para o upload.');
+      }
+      const filePath = bucket === 'product-images' ? `${restaurantId}/${fileName}` : fileName;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage

@@ -90,7 +90,7 @@ const Auth = () => {
       if (slug) {
         // Descobre o restaurante alvo pelo slug para checar autorização de super admin/reseller.
         const { data: targetRestaurant } = await supabase
-          .from('restaurants')
+          .from('restaurants_public')
           .select('id')
           .eq('slug', slug)
           .maybeSingle();

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useEffectiveRestaurantId } from '@/hooks/useEffectiveRestaurantId';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Sparkles, Loader2, Check } from 'lucide-react';
@@ -21,6 +22,7 @@ interface EnhanceWithAIButtonProps {
  */
 export function EnhanceWithAIButton({ imageUrl, onEnhanced, disabled }: EnhanceWithAIButtonProps) {
   const { toast } = useToast();
+  const { restaurantId } = useEffectiveRestaurantId();
   const { enhance, isEnhancing } = useImageEnhancer();
   const { data: quota } = useEnhancementQuota();
   const [open, setOpen] = useState(false);
@@ -61,7 +63,8 @@ export function EnhanceWithAIButton({ imageUrl, onEnhanced, disabled }: EnhanceW
       const res = await fetch(afterUrl);
       if (!res.ok) throw new Error('Falha ao baixar imagem melhorada');
       const blob = await res.blob();
-      const filename = `enhanced-${Date.now()}.png`;
+      if (!restaurantId) throw new Error('Estabelecimento não identificado para o upload.');
+      const filename = `${restaurantId}/enhanced-${Date.now()}.png`;
       const { error: upErr } = await supabase.storage
         .from('product-images')
         .upload(filename, blob, { contentType: 'image/png', upsert: false });
