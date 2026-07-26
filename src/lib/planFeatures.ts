@@ -60,6 +60,7 @@ export const ALL_PLAN_FEATURE_IDS: string[] = PLAN_FEATURE_GROUPS.flatMap((g) =>
 export const ALWAYS_ENABLED_FEATURES = new Set<string>([
   'dashboard',
   'settings',
+  'whatsapp-health',
   'menu',
   'waiter-access',
   'print-settings',
