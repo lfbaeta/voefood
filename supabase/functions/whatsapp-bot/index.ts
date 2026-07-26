@@ -1,5 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  chooseEvolutionTarget,
+  extractEvolutionMessageId,
+  formatEvolutionError,
+  normalizeEvolutionTarget,
+  sendEvolutionText,
+} from "../_shared/evolutionSend.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1071,7 +1078,7 @@ async function execTool(
 
       const sentList: any[] = [];
       const semFoto: any[] = [];
-      const number = digitsOnly(ctx.customer_phone);
+      const number = normalizeEvolutionTarget(ctx.send_target ?? ctx.customer_phone);
       for (let i = 0; i < prods.length; i++) {
         const p = prods[i];
         if (!p.image_url) { semFoto.push({ id: p.id, nome: p.name }); continue; }
@@ -1108,11 +1115,11 @@ async function execTool(
       const msg = (args?.message && String(args.message).slice(0, 300)) ||
         "Aqui está nosso cardápio completo 👇";
       const text = `${msg}\n${url}`;
-      const number = digitsOnly(ctx.customer_phone);
+      const number = normalizeEvolutionTarget(ctx.send_target ?? ctx.customer_phone);
       const sent = await sendWhatsApp(ctx.evo_server, ctx.evo_api_key, ctx.evo_instance, number, text);
       if (!sent.ok) return { success: false, output: null, error: `Falha ao enviar link (status ${sent.status})` };
 
-      const waId = sent.body?.key?.id ?? sent.body?.messageId ?? null;
+      const waId = extractEvolutionMessageId(sent.body);
       await supa.from("wa_messages").insert({
         restaurant_id: ctx.restaurant_id,
         conversation_id: ctx.conversation_id,
@@ -1151,10 +1158,10 @@ async function execTool(
       const msg = (args?.message && String(args.message).slice(0, 300)) ||
         `Olha o ${prod.name} aqui 👇`;
       const text = `${msg}\n${url}`;
-      const number = digitsOnly(ctx.customer_phone);
+      const number = normalizeEvolutionTarget(ctx.send_target ?? ctx.customer_phone);
       const sent = await sendWhatsApp(ctx.evo_server, ctx.evo_api_key, ctx.evo_instance, number, text);
       if (!sent.ok) return { success: false, output: null, error: `Falha ao enviar link (status ${sent.status})` };
-      const waId = sent.body?.key?.id ?? sent.body?.messageId ?? null;
+      const waId = extractEvolutionMessageId(sent.body);
       await supa.from("wa_messages").insert({
         restaurant_id: ctx.restaurant_id,
         conversation_id: ctx.conversation_id,
@@ -1665,30 +1672,30 @@ function bodyPreview(body: any): string {
 }
 
 function sendErrorMessage(result: Awaited<ReturnType<typeof evoPost>> | null): string {
-  if (!result) return "A Evolution não respondeu ao envio.";
-  const raw = result.body?.message ?? result.body?.error ?? result.body?.response?.message ?? result.body?.response?.error;
-  const message = Array.isArray(raw) ? raw.join(" ") : raw ? String(raw) : "";
-  return message || `A Evolution respondeu status ${result.status} no caminho ${result.path}: ${bodyPreview(result.body)}`;
+  return formatEvolutionError(result as any, "A Evolution recusou o envio da mensagem.");
 }
 
-async function sendWhatsApp(server: string, apiKey: string, instance: string, number: string, text: string) {
-  const attempts = [
-    { path: `/message/sendText/${encodeURIComponent(instance)}`, body: { number, text } },
-    { path: "/send/text", body: { number, text } },
-  ];
+async function sendWhatsApp(
+  server: string,
+  apiKey: string,
+  instance: string,
+  number: string,
+  text: string,
+  options: { globalApiKey?: string | null; instanceToken?: string | null; instanceUuid?: string | null; debug?: boolean } = {},
+) {
+  const result = await sendEvolutionText({
+    serverUrl: server,
+    globalApiKey: options.globalApiKey ?? apiKey,
+    instanceToken: options.instanceToken,
+    instanceName: instance,
+    instanceUuid: options.instanceUuid,
+    debug: options.debug ?? Deno.env.get("EVOLUTION_DEBUG") === "true",
+  }, number, text);
 
-  let last: Awaited<ReturnType<typeof evoPost>> | null = null;
-  for (const attempt of attempts) {
-    const result = await evoPost(server, apiKey, attempt.path, attempt.body);
-    if (result.ok) return result;
-    last = result;
+  if (!result.ok) {
+    console.error(`[whatsapp-bot] evolution send failed endpoint=${result.endpoint} path=${result.path} status=${result.status} body=${bodyPreview(result.body)}`);
   }
-
-  if (last) {
-    console.error(`[whatsapp-bot] evolution send failed path=${last.path} status=${last.status} body=${bodyPreview(last.body)}`);
-    return last;
-  }
-  return { ok: false, status: 0, body: { error: "send_failed" }, path: "" };
+  return result as any;
 }
 
 async function sendWhatsAppImage(
@@ -1825,11 +1832,11 @@ serve(async (req) => {
     if (!contact?.phone_e164) return skipped("no_contact");
     // O LID fica salvo só para reconhecer mensagens recebidas. No envio, o
     // Evolution/Baileys é mais confiável usando o telefone normalizado.
-    const sendTarget = digitsOnly(contact.phone_e164);
+    const sendTarget = chooseEvolutionTarget(contact.phone_e164, contact.wa_lid);
 
     const { data: inst } = await supa
       .from("evolution_instances")
-      .select("id, instance_name, reseller_id, status, instance_token")
+      .select("id, instance_name, instance_uuid, reseller_id, status, instance_token")
       .eq("id", conv.instance_id)
       .maybeSingle();
     if (!inst || inst.status !== "connected") return skipped("instance_disconnected");
@@ -1934,11 +1941,18 @@ serve(async (req) => {
     ];
     if (injectionPatterns.some((re) => re.test(inboundText))) {
       const reply = "Posso ajudar com cardápio, pedidos, taxa e horário 🙂 Pra desconto, só com cupom oficial — quer ver os que estão ativos?";
-      await sendWhatsApp(cfg.server_url, evo_api_key, inst.instance_name, sendTarget, reply);
+      const sendRes = await sendWhatsApp(cfg.server_url, evo_api_key, inst.instance_name, sendTarget, reply, {
+        globalApiKey: cfg.global_api_key,
+        instanceToken: inst.instance_token,
+        instanceUuid: inst.instance_uuid,
+      });
       await supa.from("wa_messages").insert({
         restaurant_id: conv.restaurant_id, conversation_id: conv.id, direction: "out", from_me: true,
-        content_type: "text", text: reply, status: "sent", sent_at: new Date().toISOString(),
+        wa_message_id: extractEvolutionMessageId(sendRes.body),
+        content_type: "text", text: reply, status: sendRes.ok ? "sent" : "failed", sent_at: new Date().toISOString(),
+        send_error: sendRes.ok ? null : sendErrorMessage(sendRes),
       });
+      if (!sendRes.ok) return json({ ok: false, sent: false, error: sendErrorMessage(sendRes), blocked: "prompt_injection" }, 502);
       return json({ ok: true, blocked: "prompt_injection" });
     }
 
@@ -2040,6 +2054,10 @@ serve(async (req) => {
             evo_server: cfg.server_url,
             evo_api_key,
             evo_instance: inst.instance_name,
+            evo_global_api_key: cfg.global_api_key,
+            evo_instance_token: inst.instance_token,
+            evo_instance_uuid: inst.instance_uuid,
+            send_target: sendTarget,
           });
           await supa.from("agent_tool_executions").insert({
             restaurant_id: conv.restaurant_id,
@@ -2081,23 +2099,37 @@ serve(async (req) => {
       const b = bubbles[i];
       if (!b) continue;
       if (i > 0 && typingDelay > 0) await sleep(typingDelay);
-      const sendRes = await sendWhatsApp(cfg.server_url, evo_api_key, inst.instance_name, number, b);
-      if (!sendRes.ok) {
-        anyFailed = true;
-        failures.push(sendErrorMessage(sendRes));
-      }
-      const waId = sendRes.body?.key?.id ?? sendRes.body?.messageId ?? null;
-      await supa.from("wa_messages").insert({
+      const { data: pendingMessage, error: pendingError } = await supa.from("wa_messages").insert({
         restaurant_id: conv.restaurant_id,
         conversation_id: conv.id,
-        wa_message_id: waId,
         direction: "out",
         from_me: true,
         content_type: "text",
         text: b,
-        status: sendRes.ok ? "sent" : "failed",
+        status: "pending",
         sent_at: new Date().toISOString(),
+      }).select("id").single();
+      if (pendingError || !pendingMessage?.id) {
+        anyFailed = true;
+        failures.push(pendingError?.message || "Falha ao salvar mensagem pendente antes do envio.");
+        continue;
+      }
+
+      const sendRes = await sendWhatsApp(cfg.server_url, evo_api_key, inst.instance_name, number, b, {
+        globalApiKey: cfg.global_api_key,
+        instanceToken: inst.instance_token,
+        instanceUuid: inst.instance_uuid,
       });
+      if (!sendRes.ok) {
+        anyFailed = true;
+        failures.push(sendErrorMessage(sendRes));
+      }
+      const waId = extractEvolutionMessageId(sendRes.body);
+      await supa.from("wa_messages").update({
+        wa_message_id: waId,
+        status: sendRes.ok ? "sent" : "failed",
+        send_error: sendRes.ok ? null : sendErrorMessage(sendRes),
+      }).eq("id", pendingMessage.id);
     }
 
     if (anyFailed) {
