@@ -8,6 +8,7 @@ import {
   normalizeEvolutionTarget,
   sendEvolutionText,
 } from "../_shared/evolutionSend.ts";
+import { logSendAttempt } from "../_shared/evolutionTelemetry.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -407,6 +408,17 @@ serve(async (req) => {
         status: resp.ok ? getEvolutionOutgoingStatus(resp.body) : "failed",
         send_error: resp.ok ? null : evoError(resp, "Falha ao enviar a mensagem."),
       }).eq("id", inserted.id);
+      await logSendAttempt(supaAdmin, {
+        restaurant_id: conv.restaurant_id,
+        instance_id: inst.id,
+        instance_name: inst.instance_name,
+        conversation_id: conv.id,
+        message_id: inserted.id,
+        source: "agent-manual",
+        target: Array.isArray(number) ? number.join(",") : number,
+        preview: text,
+        result: resp,
+      });
       if (!resp.ok) return json({ error: evoError(resp, "Falha ao enviar a mensagem."), response: resp.body, attempts: (resp as any).attempts }, 400);
       return json({ ok: true, id: inserted?.id });
     }

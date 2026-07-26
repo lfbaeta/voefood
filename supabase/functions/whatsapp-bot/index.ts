@@ -9,6 +9,7 @@ import {
   normalizeEvolutionTarget,
   sendEvolutionText,
 } from "../_shared/evolutionSend.ts";
+import { logSendAttempt } from "../_shared/evolutionTelemetry.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1969,6 +1970,16 @@ serve(async (req) => {
         content_type: "text", text: reply, status: sendRes.ok ? getEvolutionOutgoingStatus(sendRes.body) : "failed", sent_at: new Date().toISOString(),
         send_error: sendRes.ok ? null : sendErrorMessage(sendRes),
       });
+      await logSendAttempt(supa, {
+        restaurant_id: conv.restaurant_id,
+        instance_id: inst.id,
+        instance_name: inst.instance_name,
+        conversation_id: conv.id,
+        source: "bot-guardrail",
+        target: Array.isArray(sendTarget) ? sendTarget.join(",") : sendTarget,
+        preview: reply,
+        result: sendRes,
+      });
       if (!sendRes.ok) return json({ ok: false, sent: false, error: sendErrorMessage(sendRes), blocked: "prompt_injection" }, 502);
       return json({ ok: true, blocked: "prompt_injection" });
     }
@@ -2147,6 +2158,17 @@ serve(async (req) => {
         status: sendRes.ok ? getEvolutionOutgoingStatus(sendRes.body) : "failed",
         send_error: sendRes.ok ? null : sendErrorMessage(sendRes),
       }).eq("id", pendingMessage.id);
+      await logSendAttempt(supa, {
+        restaurant_id: conv.restaurant_id,
+        instance_id: inst.id,
+        instance_name: inst.instance_name,
+        conversation_id: conv.id,
+        message_id: pendingMessage.id,
+        source: "bot-reply",
+        target: Array.isArray(number) ? number.join(",") : number,
+        preview: b,
+        result: sendRes,
+      });
     }
 
     if (anyFailed) {

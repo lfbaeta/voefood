@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { extractEvolutionMessageId, formatEvolutionError, sendEvolutionText } from "../_shared/evolutionSend.ts";
+import { logSendAttempt } from "../_shared/evolutionTelemetry.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -182,6 +183,16 @@ serve(async (req) => {
       instanceUuid: inst.instance_uuid,
       debug: Deno.env.get("EVOLUTION_DEBUG") === "true",
     }, phone, message);
+    await logSendAttempt(supa, {
+      restaurant_id: order.restaurant_id,
+      instance_id: inst.id,
+      instance_name: inst.instance_name,
+      order_id: orderId,
+      source: "order-status",
+      target: phone,
+      preview: message,
+      result: sendRes,
+    });
     if (!sendRes.ok) {
       const error = formatEvolutionError(sendRes, "Falha ao enviar notificação de pedido.");
       console.error("[agent-notify-order-status] send failed", error, JSON.stringify(sendRes.attempts).slice(0, 2000));
