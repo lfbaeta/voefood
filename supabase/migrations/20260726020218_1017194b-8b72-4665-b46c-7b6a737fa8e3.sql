@@ -1,0 +1,1 @@
+UPDATE public.wa_contacts SET wa_lid = '260803399807219@lid' WHERE phone_e164 LIKE '%13997077575' AND (wa_lid IS NULL OR wa_lid = '');
