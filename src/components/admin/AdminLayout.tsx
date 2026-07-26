@@ -113,6 +113,7 @@ const getNavGroups = (basePath: string, menuPath: string) => [
     items: [
       { id: 'chat', label: 'Chat', icon: MessageCircle, path: `${basePath}/chat` },
       { id: 'whatsapp-connections', label: 'Conexões', icon: Settings, path: `${basePath}/whatsapp` },
+      { id: 'whatsapp-health', label: 'Saúde / Webhooks', icon: Activity, path: `${basePath}/whatsapp-health` },
       { id: 'ai-agents', label: 'Agentes IA', icon: Bot, path: `${basePath}/ai-agents` },
     ]
   },

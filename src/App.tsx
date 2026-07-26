@@ -40,6 +40,7 @@ const AdminPDV = lazy(() => import("./pages/admin/PDV"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminWaiters = lazy(() => import("./pages/admin/Waiters"));
 const AdminWhatsApp = lazy(() => import("./pages/admin/WhatsAppConnections"));
+const AdminWhatsAppHealth = lazy(() => import("./pages/admin/WhatsAppHealth"));
 const AdminChat = lazy(() => import("./pages/admin/Chat"));
 const AdminAIAgents = lazy(() => import("./pages/admin/AIAgents"));
 const AdminImageEnhancer = lazy(() => import("./pages/admin/ImageEnhancer"));
@@ -144,6 +145,7 @@ function RestaurantRoutes() {
       <Route path="admin/cash-register" element={<AdminCashRegister />} />
       <Route path="admin/waiters" element={<AdminWaiters />} />
       <Route path="admin/whatsapp" element={<AdminWhatsApp />} />
+      <Route path="admin/whatsapp-health" element={<AdminWhatsAppHealth />} />
       <Route path="admin/chat" element={<AdminChat />} />
       <Route path="admin/ai-agents" element={<AdminAIAgents />} />
       <Route path="admin/image-enhancer" element={<AdminImageEnhancer />} />
