@@ -1853,7 +1853,9 @@ serve(async (req) => {
       .eq("id", conv.restaurant_id)
       .maybeSingle();
     const restaurant_slug: string | null = restRow?.slug ?? null;
-    const evo_api_key = inst.instance_token || cfg.global_api_key;
+    // Evolution API v2 sends are more reliable with the global API key. The
+    // per-instance token is kept only as a fallback when no global key exists.
+    const evo_api_key = cfg.global_api_key || inst.instance_token;
 
     // Load history
     const { data: history } = await supa
