@@ -18,8 +18,9 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, QrCode, RefreshCw, Power, Trash2, Star, Webhook } from 'lucide-react';
+import { Loader2, Plus, QrCode, RefreshCw, Power, Trash2, Star, Webhook, Send } from 'lucide-react';
 import { QrCodeImage } from '@/components/whatsapp/QrCodeImage';
+import { getFunctionErrorMessage } from '@/lib/functionErrors';
 
 type Instance = {
   id: string;
@@ -57,6 +58,10 @@ export function EvolutionInstancesTab() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [qrInstance, setQrInstance] = useState<Instance | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [testOpen, setTestOpen] = useState(false);
+  const [testInstance, setTestInstance] = useState<Instance | null>(null);
+  const [testPhone, setTestPhone] = useState('');
+  const [testSending, setTestSending] = useState(false);
 
   useEffect(() => {
     if (!restaurantId && restaurants[0]) setRestaurantId(restaurants[0].id);
@@ -70,7 +75,7 @@ export function EvolutionInstancesTab() {
     });
     setLoading(false);
     if (error || data?.error) {
-      toast({ title: 'Erro', description: data?.error || error?.message, variant: 'destructive' });
+      toast({ title: 'Erro', description: await getFunctionErrorMessage(data, error, 'Não foi possível carregar as instâncias.'), variant: 'destructive' });
       return;
     }
     setInstances((data?.instances || []) as Instance[]);
@@ -100,7 +105,7 @@ export function EvolutionInstancesTab() {
     });
     if (id) setBusyId(null);
     if (error || data?.error) {
-      const description = data?.error || error?.context?.error || error?.message;
+      const description = await getFunctionErrorMessage(data, error, 'A Evolution não concluiu a ação.');
       toast({ title: 'Erro', description, variant: 'destructive' });
       return null;
     }
@@ -197,6 +202,39 @@ export function EvolutionInstancesTab() {
     }
   }
 
+  function openTestDialog(inst: Instance) {
+    setTestInstance(inst);
+    setTestPhone('');
+    setTestOpen(true);
+  }
+
+  async function handleSendTest() {
+    if (!restaurantId || !testInstance) return;
+    const digits = testPhone.replace(/\D/g, '');
+    if (digits.length < 10) {
+      toast({ title: 'Telefone inválido', description: 'Informe DDI, DDD e número. Ex.: 5511999998888', variant: 'destructive' });
+      return;
+    }
+    setTestSending(true);
+    const { data, error } = await supabase.functions.invoke('evolution-send', {
+      body: {
+        action: 'send_direct',
+        restaurant_id: restaurantId,
+        instance_id: testInstance.id,
+        type: 'text',
+        to: digits,
+        payload: { text: 'Mensagem de teste do VoeFood: se você recebeu esta mensagem, o envio pelo WhatsApp está funcionando.' },
+      },
+    });
+    setTestSending(false);
+    if (error || data?.error || data?.ok === false) {
+      toast({ title: 'Teste não enviado', description: await getFunctionErrorMessage(data, error, 'A mensagem de teste não foi aceita pela Evolution.'), variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Mensagem de teste enviada', description: 'Confira se ela chegou no WhatsApp informado.' });
+    setTestOpen(false);
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -263,9 +301,14 @@ export function EvolutionInstancesTab() {
                       <QrCode className="h-4 w-4 mr-1" /> Conectar
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => handleDisconnect(inst)} disabled={busyId === inst.id}>
-                      <Power className="h-4 w-4 mr-1" /> Desconectar
-                    </Button>
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => openTestDialog(inst)} disabled={busyId === inst.id}>
+                        <Send className="h-4 w-4 mr-1" /> Teste
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleDisconnect(inst)} disabled={busyId === inst.id}>
+                        <Power className="h-4 w-4 mr-1" /> Desconectar
+                      </Button>
+                    </>
                   )}
                   <Button
                     size="sm"
@@ -360,6 +403,34 @@ export function EvolutionInstancesTab() {
               <RefreshCw className="h-4 w-4 mr-2" /> Gerar novo QR
             </Button>
             <Button onClick={() => setQrOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={testOpen} onOpenChange={setTestOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enviar mensagem de teste</DialogTitle>
+            <DialogDescription>
+              A mensagem será enviada pela instância {testInstance?.instance_name}. Use um número com DDI e DDD.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="test-phone">Telefone</Label>
+            <Input
+              id="test-phone"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+              placeholder="5511999998888"
+              inputMode="tel"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestOpen(false)} disabled={testSending}>Cancelar</Button>
+            <Button onClick={handleSendTest} disabled={testSending || testPhone.replace(/\D/g, '').length < 10}>
+              {testSending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+              Enviar teste
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

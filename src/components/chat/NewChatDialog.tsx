@@ -9,6 +9,7 @@ import { Loader2, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { EvolutionInstance } from '@/hooks/useWhatsApp';
+import { getFunctionErrorMessage } from '@/lib/functionErrors';
 
 interface NewChatDialogProps {
   open: boolean;
@@ -66,7 +67,7 @@ export function NewChatDialog({
     });
     setSending(false);
     if (error || data?.error) {
-      toast({ title: 'Erro', description: data?.error || error?.message, variant: 'destructive' });
+      toast({ title: 'Erro', description: await getFunctionErrorMessage(data, error, 'Não foi possível iniciar a conversa.'), variant: 'destructive' });
       return;
     }
     toast({ title: 'Conversa iniciada' });

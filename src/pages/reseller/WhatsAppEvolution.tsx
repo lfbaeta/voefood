@@ -10,6 +10,7 @@ import { Loader2, Eye, EyeOff, Server, Smartphone, Monitor, CheckCircle2 } from 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EvolutionInstancesTab } from '@/components/reseller/EvolutionInstancesTab';
+import { getFunctionErrorMessage } from '@/lib/functionErrors';
 
 type ConfigState = {
   server_url: string;
@@ -53,7 +54,7 @@ function ServerTab() {
     });
     setSaving(false);
     if (error || data?.error) {
-      toast({ title: 'Erro', description: data?.error || error?.message, variant: 'destructive' });
+      toast({ title: 'Erro', description: await getFunctionErrorMessage(data, error, 'Não foi possível salvar a configuração da Evolution.'), variant: 'destructive' });
       return;
     }
     toast({ title: 'Configuração salva' });
@@ -67,7 +68,7 @@ function ServerTab() {
     });
     setTesting(false);
     if (error || !data?.ok) {
-      toast({ title: 'Falha no teste', description: data?.error || error?.message, variant: 'destructive' });
+      toast({ title: 'Falha no teste', description: await getFunctionErrorMessage(data, error, 'A Evolution não respondeu com sucesso.'), variant: 'destructive' });
       return;
     }
     toast({ title: 'Conexão OK!' });
@@ -81,8 +82,8 @@ function ServerTab() {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="url">URL do Evolution Go</Label>
-        <Input id="url" placeholder="https://meuservidor.evogo.host" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} />
+        <Label htmlFor="url">URL da Evolution</Label>
+        <Input id="url" placeholder="https://meuservidor.evolution.com" value={serverUrl} onChange={(e) => setServerUrl(e.target.value)} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="key">Global API Key</Label>
@@ -119,7 +120,7 @@ function ServerTab() {
 function ManagerTab() {
   return (
     <div className="text-sm text-muted-foreground py-6 text-center">
-      Acesso direto ao Manager do Evolution Go será disponibilizado em breve.
+      Acesso direto ao painel da Evolution será disponibilizado em breve.
     </div>
   );
 }
@@ -134,10 +135,10 @@ export default function WhatsAppEvolution() {
   }, []);
 
   return (
-    <ResellerLayout title="WhatsApp / Evolution Go">
+    <ResellerLayout title="WhatsApp / Evolution">
       <div className="space-y-6 max-w-5xl">
         <div>
-          <h1 className="text-2xl font-bold">WhatsApp / Evolution Go</h1>
+          <h1 className="text-2xl font-bold">WhatsApp / Evolution</h1>
           <p className="text-muted-foreground">Configure o servidor global e gerencie as instâncias de cada empresa.</p>
         </div>
 
@@ -148,7 +149,7 @@ export default function WhatsAppEvolution() {
                 <Server className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <CardTitle>Servidor Evolution Go</CardTitle>
+                <CardTitle>Servidor Evolution</CardTitle>
                 <CardDescription>Configuração global usada por todas as empresas</CardDescription>
               </div>
             </div>

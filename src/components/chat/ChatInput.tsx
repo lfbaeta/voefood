@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AudioRecorder } from './AudioRecorder';
 import { QuickRepliesPopover } from './QuickRepliesPopover';
 import { useQuickReplies } from '@/hooks/useQuickReplies';
+import { getFunctionErrorMessage } from '@/lib/functionErrors';
 
 interface ChatInputProps {
   conversationId: string;
@@ -57,7 +58,7 @@ export function ChatInput({ conversationId, restaurantId, disabled, disabledReas
     });
     setSending(false);
     if (error || data?.error) {
-      toast({ title: 'Erro ao enviar', description: data?.error || error?.message, variant: 'destructive' });
+      toast({ title: 'Erro ao enviar', description: await getFunctionErrorMessage(data, error, 'A mensagem não foi enviada pelo WhatsApp.'), variant: 'destructive' });
       return;
     }
     setText('');
@@ -82,7 +83,7 @@ export function ChatInput({ conversationId, restaurantId, disabled, disabledReas
       },
     });
     if (error || data?.error) {
-      toast({ title: 'Erro ao enviar', description: data?.error || error?.message, variant: 'destructive' });
+      toast({ title: 'Erro ao enviar', description: await getFunctionErrorMessage(data, error, 'A mídia não foi enviada pelo WhatsApp.'), variant: 'destructive' });
     }
   }
 

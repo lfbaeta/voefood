@@ -15,6 +15,7 @@ import { Loader2, Bot, Key, Save, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useResellerRestaurants } from '@/hooks/useReseller';
+import { getFunctionErrorMessage } from '@/lib/functionErrors';
 
 type Routing = {
   id?: string;
@@ -105,15 +106,7 @@ export default function AIRouting() {
       body: { action: 'set', restaurant_id: restaurantId, provider: keyDialog, api_key: keyValue.trim() },
     });
     if (error || data?.error) {
-      let detail = data?.error || error?.message;
-      try {
-        const ctx = (error as any)?.context;
-        if (ctx?.text) {
-          const raw = await ctx.text();
-          const parsed = JSON.parse(raw);
-          detail = parsed?.error || raw || detail;
-        }
-      } catch { /* ignore */ }
+      const detail = await getFunctionErrorMessage(data, error, 'Não foi possível salvar a chave da IA.');
       toast({ title: 'Erro', description: detail, variant: 'destructive' });
       return;
     }
