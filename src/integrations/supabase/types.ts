@@ -1401,6 +1401,111 @@ export type Database = {
         }
         Relationships: []
       }
+      evolution_send_attempts: {
+        Row: {
+          attempts: Json | null
+          conversation_id: string | null
+          created_at: string
+          endpoint: string | null
+          error: string | null
+          http_status: number | null
+          id: string
+          instance_id: string | null
+          instance_name: string | null
+          key_source: string | null
+          message_id: string | null
+          ok: boolean
+          order_id: number | null
+          preview: string | null
+          restaurant_id: string | null
+          source: string
+          target: string | null
+        }
+        Insert: {
+          attempts?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          endpoint?: string | null
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          instance_id?: string | null
+          instance_name?: string | null
+          key_source?: string | null
+          message_id?: string | null
+          ok?: boolean
+          order_id?: number | null
+          preview?: string | null
+          restaurant_id?: string | null
+          source?: string
+          target?: string | null
+        }
+        Update: {
+          attempts?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          endpoint?: string | null
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          instance_id?: string | null
+          instance_name?: string | null
+          key_source?: string | null
+          message_id?: string | null
+          ok?: boolean
+          order_id?: number | null
+          preview?: string | null
+          restaurant_id?: string | null
+          source?: string
+          target?: string | null
+        }
+        Relationships: []
+      }
+      evolution_webhook_events: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          direction: string | null
+          error: string | null
+          event: string
+          id: string
+          instance_id: string | null
+          instance_name: string | null
+          payload_summary: Json | null
+          restaurant_id: string | null
+          status: string
+          wa_message_id: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          direction?: string | null
+          error?: string | null
+          event: string
+          id?: string
+          instance_id?: string | null
+          instance_name?: string | null
+          payload_summary?: Json | null
+          restaurant_id?: string | null
+          status?: string
+          wa_message_id?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          direction?: string | null
+          error?: string | null
+          event?: string
+          id?: string
+          instance_id?: string | null
+          instance_name?: string | null
+          payload_summary?: Json | null
+          restaurant_id?: string | null
+          status?: string
+          wa_message_id?: string | null
+        }
+        Relationships: []
+      }
       fiscal_config: {
         Row: {
           aliquota_cofins: number | null
