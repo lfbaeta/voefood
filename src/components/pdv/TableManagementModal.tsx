@@ -69,6 +69,8 @@ export function TableManagementModal({ open, onOpenChange }: TableManagementModa
       capacity: parseInt(newTableCapacity) || 4,
     });
 
+    setQrTable({ number, name: newTableName || null });
+
     setNewTableNumber('');
     setNewTableName('');
     setNewTableCapacity('4');
