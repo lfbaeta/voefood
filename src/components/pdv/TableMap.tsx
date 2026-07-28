@@ -130,7 +130,7 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Select value={refreshSeconds} onValueChange={setRefreshSeconds}>
-            <SelectTrigger className="h-8 w-[92px] text-xs border-0 bg-transparent text-muted-foreground shadow-none focus:ring-0 px-2">
+            <SelectTrigger className="h-8 w-[112px] text-xs border-0 bg-transparent text-muted-foreground shadow-none focus:ring-0 px-2">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
