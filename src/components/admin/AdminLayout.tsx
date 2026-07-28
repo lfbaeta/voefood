@@ -44,7 +44,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
 
 import { useStoreConfig } from '@/hooks/useStore';
-import { useStoreOpenStatus } from '@/hooks/useStoreOpenStatus';
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 import { StaffNotificationBell } from '@/components/notifications/StaffNotificationBell';
