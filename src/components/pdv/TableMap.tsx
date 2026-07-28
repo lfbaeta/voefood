@@ -123,7 +123,6 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
             </SelectContent>
           </Select>
         </div>
-        </div>
       </div>
 
 
