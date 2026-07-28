@@ -44,6 +44,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { toast } from 'sonner';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
+import { useStoreConfig, useUpdateStoreConfig } from '@/hooks/useStore';
 
 type Period = 'today' | 'week' | 'month';
 
@@ -349,7 +350,18 @@ export default function Dashboard() {
     }
   };
 
+  const handleStoreToggle = async (checked: boolean) => {
+    if (!storeConfig?.id) return;
+    try {
+      await updateStoreConfig.mutateAsync({ id: storeConfig.id, is_open: checked });
+      toast.success(checked ? 'Loja aberta' : 'Loja fechada');
+    } catch {
+      toast.error('Erro ao atualizar status da loja');
+    }
+  };
+
   const handleSoundToggle = (checked: boolean) => {
+
     setSoundEnabled(checked);
     setEnabled(checked);
     if (checked && pendingCount > 0) {
