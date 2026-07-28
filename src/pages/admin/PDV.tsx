@@ -100,7 +100,8 @@ export default function PDV() {
     setQuickSaleItems(items);
     setQuickSaleCustomerName(customerName);
     setQuickSaleModalOpen(false);
-    setQuickSaleCheckoutOpen(true);
+    setSaleItems(items as PdvCartItem[]);
+    setView('order-type');
   };
 
   const handleQuickSaleSuccess = () => {
@@ -189,7 +190,7 @@ export default function PDV() {
           onBack={() => setView('sale')}
           onSelectCounter={() => {
             setQuickSaleItems(saleItems);
-            setQuickSaleCustomerName('');
+
             setQuickSaleCheckoutOpen(true);
           }}
           onSelectDelivery={() => setView('delivery')}
