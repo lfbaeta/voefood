@@ -208,6 +208,14 @@ export function TableManagementModal({ open, onOpenChange }: TableManagementModa
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setQrTable({ number: table.number, name: table.name })}
+                          title="QR Code da mesa"
+                        >
+                          <QrCode className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => startEditing(table)}
                           disabled={occupied}
                           title={occupied ? 'Mesa ocupada - não é possível editar' : 'Editar mesa'}
