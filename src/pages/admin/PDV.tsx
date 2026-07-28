@@ -190,7 +190,7 @@ export default function PDV() {
           onBack={() => setView('sale')}
           onSelectCounter={() => {
             setQuickSaleItems(saleItems);
-            setQuickSaleCustomerName('');
+
             setQuickSaleCheckoutOpen(true);
           }}
           onSelectDelivery={() => setView('delivery')}
