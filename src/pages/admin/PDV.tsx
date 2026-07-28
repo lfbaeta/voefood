@@ -10,12 +10,15 @@ import { TableManagementModal } from '@/components/pdv/TableManagementModal';
 import { OrderHistoryModal } from '@/components/pdv/OrderHistoryModal';
 import { QuickSaleModal } from '@/components/pdv/QuickSaleModal';
 import { QuickSaleCheckout } from '@/components/pdv/QuickSaleCheckout';
+import { PdvSaleScreen, PdvCartItem } from '@/components/pdv/PdvSaleScreen';
+import { PdvOrderTypeScreen } from '@/components/pdv/PdvOrderTypeScreen';
+import { PdvDeliveryCheckout } from '@/components/pdv/PdvDeliveryCheckout';
 import { TableWithOrder, Table } from '@/types/pdv';
 import { useTablesWithOrders } from '@/hooks/useTables';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
 import { EnablePushBanner } from '@/components/notifications/EnablePushBanner';
 
-type PDVView = 'map' | 'order' | 'checkout';
+type PDVView = 'map' | 'order' | 'checkout' | 'sale' | 'order-type' | 'delivery';
 
 interface QuickSaleItem {
   id: string;
@@ -48,6 +51,8 @@ export default function PDV() {
   const [quickSaleCheckoutOpen, setQuickSaleCheckoutOpen] = useState(false);
   const [quickSaleItems, setQuickSaleItems] = useState<QuickSaleItem[]>([]);
   const [quickSaleCustomerName, setQuickSaleCustomerName] = useState('');
+
+  const [saleItems, setSaleItems] = useState<PdvCartItem[]>([]);
 
   const { tables } = useTablesWithOrders();
 
@@ -102,10 +107,13 @@ export default function PDV() {
     setQuickSaleItems([]);
     setQuickSaleCustomerName('');
     setQuickSaleCheckoutOpen(false);
+    setSaleItems([]);
+    setView('map');
   };
 
   const handleQuickSaleBack = () => {
     setQuickSaleCheckoutOpen(false);
+    if (view === 'order-type') return;
     setQuickSaleModalOpen(true);
   };
 
@@ -131,9 +139,12 @@ export default function PDV() {
               </p>
             </div>
             <div className="flex gap-2">
+              <Button variant="default" onClick={() => { setSaleItems([]); setView('sale'); }}>
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Nova Venda
+              </Button>
               <Button 
-                variant="default"
-                className="bg-green-600 hover:bg-green-700"
+                variant="secondary"
                 onClick={() => setQuickSaleModalOpen(true)}
               >
                 <ShoppingBag className="h-4 w-4 mr-2" />
@@ -160,6 +171,44 @@ export default function PDV() {
             onAddTable={() => setManagementModalOpen(true)}
           />
         </div>
+      )}
+
+      {view === 'sale' && (
+        <PdvSaleScreen
+          onBack={() => setView('map')}
+          onContinue={(items) => {
+            setSaleItems(items);
+            setView('order-type');
+          }}
+        />
+      )}
+
+      {view === 'order-type' && (
+        <PdvOrderTypeScreen
+          items={saleItems}
+          onBack={() => setView('sale')}
+          onSelectCounter={() => {
+            setQuickSaleItems(saleItems);
+            setQuickSaleCustomerName('');
+            setQuickSaleCheckoutOpen(true);
+          }}
+          onSelectDelivery={() => setView('delivery')}
+          onTableSuccess={() => {
+            setSaleItems([]);
+            setView('map');
+          }}
+        />
+      )}
+
+      {view === 'delivery' && (
+        <PdvDeliveryCheckout
+          items={saleItems}
+          onBack={() => setView('order-type')}
+          onSuccess={() => {
+            setSaleItems([]);
+            setView('map');
+          }}
+        />
       )}
 
       {view === 'order' && selectedTable && (
