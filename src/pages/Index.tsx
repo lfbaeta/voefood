@@ -26,6 +26,7 @@ import { PizzaBuilderModal } from '@/components/menu/PizzaBuilderModal';
 import { Pizza as PizzaIcon } from 'lucide-react';
 import { formatBRL } from '@/lib/pizza';
 import { setTableSession, getTableSession } from '@/lib/tableSession';
+import { TableCallActions } from '@/components/menu/TableCallActions';
 
 
 interface EditingProduct {
@@ -260,6 +261,10 @@ const Index = () => {
             <p className="text-xs text-muted-foreground">
               Seu pedido será enviado vinculado a esta mesa.
             </p>
+            <TableCallActions
+              restaurantId={store?.restaurant_id ?? store?.id ?? null}
+              tableNumber={tableNumber}
+            />
           </div>
         )}
 
