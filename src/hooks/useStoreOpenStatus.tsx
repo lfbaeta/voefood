@@ -17,12 +17,41 @@ interface StoreOpenStatusResult {
  * 2. AND the current time is within the configured business hours
  */
 export function useStoreOpenStatus(restaurantId: string | null | undefined): StoreOpenStatusResult {
+  const queryClient = useQueryClient();
   // Recompute open/closed status periodically so UI stays in sync with time.
   const [nowTick, setNowTick] = useState(() => Date.now());
   useEffect(() => {
     const id = window.setInterval(() => setNowTick(Date.now()), 60_000);
     return () => window.clearInterval(id);
   }, []);
+
+  // Keep every surface (cardápio, carrinho, painel) in sync with the manual toggle.
+  useEffect(() => {
+    if (!restaurantId) return;
+    const channel = supabase
+      .channel(`store-open-status-${restaurantId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'store_config', filter: `restaurant_id=eq.${restaurantId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['store-open-status-config', restaurantId] });
+          queryClient.invalidateQueries({ queryKey: ['store-config'] });
+          queryClient.invalidateQueries({ queryKey: ['public-store-config'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'business_hours', filter: `restaurant_id=eq.${restaurantId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['store-open-status-hours', restaurantId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [restaurantId, queryClient]);
 
   // Get store config for manual toggle
   const { data: storeConfig, isLoading: isLoadingConfig } = useQuery({
@@ -40,6 +69,9 @@ export function useStoreOpenStatus(restaurantId: string | null | undefined): Sto
       return data;
     },
     enabled: !!restaurantId,
+    staleTime: 10_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   // Get business hours
@@ -58,6 +90,9 @@ export function useStoreOpenStatus(restaurantId: string | null | undefined): Sto
       return data as BusinessHour[];
     },
     enabled: !!restaurantId,
+    staleTime: 60_000,
+    refetchInterval: 300_000,
+    refetchOnWindowFocus: true,
   });
 
   const isLoading = isLoadingConfig || isLoadingHours;
