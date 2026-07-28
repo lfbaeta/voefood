@@ -136,7 +136,7 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
             <SelectContent>
               {REFRESH_OPTIONS.map((opt) => (
                 <SelectItem key={opt} value={opt} className="text-xs">
-                  {opt === '0' ? 'Manual' : `${opt}s`}
+                  {opt === 'live' ? 'Tempo real' : `${opt}s`}
                 </SelectItem>
               ))}
             </SelectContent>
