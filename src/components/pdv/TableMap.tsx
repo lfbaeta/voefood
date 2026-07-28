@@ -209,7 +209,7 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
           <TableCard
             key={table.id}
             table={table}
-            onClick={() => onTableClick(table)}
+            onClick={() => handleTableClick(table)}
           />
         ))}
       </div>
