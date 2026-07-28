@@ -1,12 +1,15 @@
-import { useState } from 'react';
-import { Loader2, Plus, Filter } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2, Plus, Filter, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TableCard } from './TableCard';
 import { useTablesWithOrders } from '@/hooks/useTables';
 import { TableWithOrder, TableStatus } from '@/types/pdv';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type StatusFilter = 'all' | 'available' | 'occupied' | 'requesting_bill' | 'reserved';
+
+const REFRESH_OPTIONS = ['0', '10', '15', '30', '60'] as const;
 
 interface TableMapProps {
   onTableClick: (table: TableWithOrder) => void;
@@ -14,8 +17,19 @@ interface TableMapProps {
 }
 
 export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
-  const { tables, isLoading, error } = useTablesWithOrders();
+  const { tables, isLoading, error, refetch } = useTablesWithOrders();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [refreshSeconds, setRefreshSeconds] = useState('0');
+
+  useEffect(() => {
+    const seconds = Number(refreshSeconds);
+    if (!seconds) return;
+    const id = window.setInterval(() => {
+      refetch();
+    }, seconds * 1000);
+    return () => window.clearInterval(id);
+  }, [refreshSeconds, refetch]);
+
 
   if (isLoading) {
     return (
