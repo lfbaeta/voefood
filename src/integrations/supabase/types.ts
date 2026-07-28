@@ -5146,6 +5146,10 @@ export type Database = {
         Args: { p_driver_id: string; p_order_id: number }
         Returns: undefined
       }
+      can_write_store_asset: {
+        Args: { _name: string; _user_id: string }
+        Returns: boolean
+      }
       claim_due_bot_debounce: {
         Args: { p_limit?: number }
         Returns: {
