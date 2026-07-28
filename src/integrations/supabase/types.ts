@@ -5185,42 +5185,24 @@ export type Database = {
         Args: { p_from: string; p_qty: number; p_to: string }
         Returns: number
       }
-      create_customer_order:
-        | {
-            Args: {
-              p_address_complement: string
-              p_address_neighborhood: string
-              p_address_number: string
-              p_address_reference: string
-              p_address_street: string
-              p_change_for: number
-              p_customer_name: string
-              p_customer_phone: string
-              p_items: Json
-              p_payment_method: string
-              p_restaurant_id: string
-              p_total_amount: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              p_address_complement: string
-              p_address_neighborhood: string
-              p_address_number: string
-              p_address_reference: string
-              p_address_street: string
-              p_change_for: number
-              p_convenience_fee?: number
-              p_customer_name: string
-              p_customer_phone: string
-              p_items: Json
-              p_payment_method: string
-              p_restaurant_id: string
-              p_total_amount: number
-            }
-            Returns: number
-          }
+      create_customer_order: {
+        Args: {
+          p_address_complement: string
+          p_address_neighborhood: string
+          p_address_number: string
+          p_address_reference: string
+          p_address_street: string
+          p_change_for: number
+          p_convenience_fee?: number
+          p_customer_name: string
+          p_customer_phone: string
+          p_items: Json
+          p_payment_method: string
+          p_restaurant_id: string
+          p_total_amount: number
+        }
+        Returns: number
+      }
       decrypt_ai_credential: {
         Args: { p_cipher: string; p_key: string }
         Returns: string
@@ -5676,6 +5658,10 @@ export type Database = {
         Returns: boolean
       }
       is_restaurant_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_store_accepting_orders: {
+        Args: { p_restaurant_id: string }
+        Returns: boolean
+      }
       list_active_drivers: {
         Args: { p_restaurant_id: string }
         Returns: {
