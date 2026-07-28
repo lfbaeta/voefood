@@ -44,7 +44,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
 
 import { useStoreConfig } from '@/hooks/useStore';
-import { useStoreOpenStatus } from '@/hooks/useStoreOpenStatus';
 import { useTheme } from '@/hooks/useTheme';
 import { cn } from '@/lib/utils';
 import { StaffNotificationBell } from '@/components/notifications/StaffNotificationBell';
@@ -135,7 +134,8 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
 
   const { toast } = useToast();
   const { data: store } = useStoreConfig();
-  const { isOpen: storeIsOpen } = useStoreOpenStatus(store?.restaurant_id);
+  // O status do topo segue o botão manual de abrir/fechar loja
+  const storeIsOpen = !!store?.is_open;
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Determine base paths based on slug

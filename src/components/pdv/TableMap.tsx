@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 type StatusFilter = 'all' | 'available' | 'occupied' | 'requesting_bill' | 'reserved';
 
-// valores em minutos
-const REFRESH_OPTIONS = ['0', '1', '2', '5', '10', '15'] as const;
+// valores em segundos
+const REFRESH_OPTIONS = ['0', '5', '10', '15', '20', '30'] as const;
 
 interface TableMapProps {
   onTableClick: (table: TableWithOrder) => void;
@@ -23,11 +23,11 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
   const [refreshSeconds, setRefreshSeconds] = useState('0');
 
   useEffect(() => {
-    const minutes = Number(refreshSeconds);
-    if (!minutes) return;
+    const seconds = Number(refreshSeconds);
+    if (!seconds) return;
     const id = window.setInterval(() => {
       refetch();
-    }, minutes * 60 * 1000);
+    }, seconds * 1000);
     return () => window.clearInterval(id);
   }, [refreshSeconds, refetch]);
 
@@ -103,21 +103,24 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
           </ToggleGroupItem>
         </ToggleGroup>
 
-        <div className="flex items-center ml-auto rounded-md border border-input overflow-hidden">
-          <Button variant="ghost" size="sm" onClick={() => refetch()} className="gap-2 rounded-none h-9">
+        <div className="flex items-center gap-1 ml-auto">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => refetch()}
+            title="Atualizar"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          >
             <RefreshCw className="h-4 w-4" />
-            Atualizar
           </Button>
           <Select value={refreshSeconds} onValueChange={setRefreshSeconds}>
-            <SelectTrigger className="w-[160px] h-9 text-xs rounded-none border-0 border-l border-input focus:ring-0">
+            <SelectTrigger className="h-8 w-[92px] text-xs border-0 bg-transparent text-muted-foreground shadow-none focus:ring-0 px-2">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {REFRESH_OPTIONS.map((opt) => (
                 <SelectItem key={opt} value={opt} className="text-xs">
-                  {opt === '0'
-                    ? 'Sem atualização'
-                    : `A cada ${opt} ${opt === '1' ? 'minuto' : 'minutos'}`}
+                  {opt === '0' ? 'Manual' : `${opt}s`}
                 </SelectItem>
               ))}
             </SelectContent>
