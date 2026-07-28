@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Plus, Filter, RefreshCw } from 'lucide-react';
+import { differenceInMinutes } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { TableCard } from './TableCard';
 import { useTablesWithOrders } from '@/hooks/useTables';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { supabase } from '@/integrations/supabase/client';
 import { TableWithOrder, TableStatus } from '@/types/pdv';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
