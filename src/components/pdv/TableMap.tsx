@@ -103,23 +103,26 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
           </ToggleGroupItem>
         </ToggleGroup>
 
-        <div className="flex items-center gap-2 ml-auto">
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
+        <div className="flex items-center ml-auto rounded-md border border-input overflow-hidden">
+          <Button variant="ghost" size="sm" onClick={() => refetch()} className="gap-2 rounded-none h-9">
             <RefreshCw className="h-4 w-4" />
             Atualizar
           </Button>
           <Select value={refreshSeconds} onValueChange={setRefreshSeconds}>
-            <SelectTrigger className="w-[150px] h-9 text-xs">
+            <SelectTrigger className="w-[160px] h-9 text-xs rounded-none border-0 border-l border-input focus:ring-0">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {REFRESH_OPTIONS.map((opt) => (
                 <SelectItem key={opt} value={opt} className="text-xs">
-                  {opt === '0' ? 'Sem atualização' : `A cada ${opt}s`}
+                  {opt === '0'
+                    ? 'Sem atualização'
+                    : `A cada ${opt} ${opt === '1' ? 'minuto' : 'minutos'}`}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+        </div>
         </div>
       </div>
 
