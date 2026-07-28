@@ -9,8 +9,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 type StatusFilter = 'all' | 'available' | 'occupied' | 'requesting_bill' | 'reserved';
 
-// valores em segundos
-const REFRESH_OPTIONS = ['0', '5', '10', '15', '20', '30'] as const;
+// 'live' = tempo real (sem polling), demais valores em segundos
+const REFRESH_OPTIONS = ['live', '5', '10', '15', '20', '30'] as const;
+const REFRESH_STORAGE_KEY = 'pdv-table-map-refresh';
+
+function loadRefreshPref(): string {
+  try {
+    const saved = localStorage.getItem(REFRESH_STORAGE_KEY);
+    if (saved && (REFRESH_OPTIONS as readonly string[]).includes(saved)) return saved;
+  } catch {
+    /* ignore */
+  }
+  return 'live';
+}
 
 interface TableMapProps {
   onTableClick: (table: TableWithOrder) => void;
@@ -20,9 +31,14 @@ interface TableMapProps {
 export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
   const { tables, isLoading, error, refetch } = useTablesWithOrders();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [refreshSeconds, setRefreshSeconds] = useState('0');
+  const [refreshSeconds, setRefreshSeconds] = useState<string>(loadRefreshPref);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(REFRESH_STORAGE_KEY, refreshSeconds);
+    } catch {
+      /* ignore */
+    }
     const seconds = Number(refreshSeconds);
     if (!seconds) return;
     const id = window.setInterval(() => {
