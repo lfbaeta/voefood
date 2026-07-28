@@ -260,6 +260,10 @@ const Index = () => {
             <p className="text-xs text-muted-foreground">
               Seu pedido será enviado vinculado a esta mesa.
             </p>
+            <TableCallActions
+              restaurantId={store?.restaurant_id ?? store?.id ?? null}
+              tableNumber={tableNumber}
+            />
           </div>
         )}
 
