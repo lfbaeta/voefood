@@ -6,6 +6,7 @@ import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
 import { useStoreConfig } from '@/hooks/useStore';
+import { useStoreOpenStatus } from '@/hooks/useStoreOpenStatus';
 import { useTheme } from '@/hooks/useTheme';
 import { useRestaurantTracking } from '@/hooks/useRestaurantTracking';
 import { trackInitiateCheckout } from '@/lib/tracking';
