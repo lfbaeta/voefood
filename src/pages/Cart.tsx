@@ -6,6 +6,7 @@ import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
 import { useStoreConfig } from '@/hooks/useStore';
+import { useStoreOpenStatus } from '@/hooks/useStoreOpenStatus';
 import { useTheme } from '@/hooks/useTheme';
 import { useRestaurantTracking } from '@/hooks/useRestaurantTracking';
 import { trackInitiateCheckout } from '@/lib/tracking';
@@ -16,6 +17,7 @@ const Cart = () => {
   const slug = useSlug();
   const { items, totalItems, totalPrice, updateQuantity, removeItem, restaurantSlug, setRestaurantSlug, belongsTo, clearCart } = useCart();
   const { data: store } = useStoreConfig();
+  const { isOpen: isStoreOpen } = useStoreOpenStatus(store?.restaurant_id ?? store?.id ?? null);
 
   // Apply theme colors dynamically
   useTheme();
@@ -213,6 +215,11 @@ const Cart = () => {
         {/* Footer */}
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 pb-6">
           <div className="mx-auto max-w-[1200px] space-y-4">
+            {!isStoreOpen && (
+              <div className="rounded-2xl bg-destructive/10 px-4 py-3 text-center text-sm font-medium text-destructive">
+                Loja fechada no momento — não estamos recebendo pedidos.
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Total</span>
               <span className="text-xl font-bold text-foreground">{formatCurrency(totalPrice)}</span>
@@ -221,8 +228,9 @@ const Cart = () => {
               onClick={() => navigate(`${basePath}/checkout`)}
               size="xl"
               className="w-full rounded-full"
+              disabled={!isStoreOpen}
             >
-              Continuar para pagamento
+              {isStoreOpen ? 'Continuar para pagamento' : 'Loja fechada'}
             </Button>
           </div>
         </div>

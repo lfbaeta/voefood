@@ -180,7 +180,12 @@ export function useCreateOrder() {
         })),
       } as any);
 
-      if (rpcError) throw rpcError;
+      if (rpcError) {
+        if ((rpcError.message || '').includes('store_closed')) {
+          throw new Error('A loja está fechada no momento e não está recebendo pedidos.');
+        }
+        throw rpcError;
+      }
 
       // Fire-and-forget push notification to staff about the new order.
       supabase.functions.invoke('notify-event', {
