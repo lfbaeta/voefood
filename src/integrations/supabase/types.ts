@@ -4419,6 +4419,7 @@ export type Database = {
           restaurant_id: string | null
           status: string | null
           updated_at: string | null
+          waiter_called_at: string | null
         }
         Insert: {
           capacity?: number | null
@@ -4430,6 +4431,7 @@ export type Database = {
           restaurant_id?: string | null
           status?: string | null
           updated_at?: string | null
+          waiter_called_at?: string | null
         }
         Update: {
           capacity?: number | null
@@ -4441,6 +4443,7 @@ export type Database = {
           restaurant_id?: string | null
           status?: string | null
           updated_at?: string | null
+          waiter_called_at?: string | null
         }
         Relationships: [
           {
@@ -5787,6 +5790,14 @@ export type Database = {
           last_seen: string
           status: string
         }[]
+      }
+      table_customer_request: {
+        Args: {
+          p_request: string
+          p_restaurant_id: string
+          p_table_number: number
+        }
+        Returns: Json
       }
       update_driver_settings: {
         Args: {
