@@ -17,6 +17,7 @@ const Cart = () => {
   const slug = useSlug();
   const { items, totalItems, totalPrice, updateQuantity, removeItem, restaurantSlug, setRestaurantSlug, belongsTo, clearCart } = useCart();
   const { data: store } = useStoreConfig();
+  const { isOpen: isStoreOpen } = useStoreOpenStatus(store?.restaurant_id ?? store?.id ?? null);
 
   // Apply theme colors dynamically
   useTheme();
