@@ -281,3 +281,38 @@
 .animate-glow {
   animation: glow 2s ease-in-out infinite;
 }
+
+/* PDV table alerts */
+@keyframes table-blink-waiter {
+  0%, 100% {
+    background-color: hsl(45 100% 51% / 0.18);
+    border-color: hsl(45 100% 51% / 0.5);
+    box-shadow: 0 0 0 0 hsl(45 100% 51% / 0);
+  }
+  50% {
+    background-color: hsl(45 100% 51% / 0.55);
+    border-color: hsl(45 100% 45%);
+    box-shadow: 0 0 22px 2px hsl(45 100% 51% / 0.55);
+  }
+}
+
+@keyframes table-blink-bill {
+  0%, 100% {
+    background-color: hsl(0 85% 60% / 0.14);
+    border-color: hsl(0 85% 60% / 0.45);
+    box-shadow: 0 0 0 0 hsl(0 85% 60% / 0);
+  }
+  50% {
+    background-color: hsl(0 85% 70% / 0.45);
+    border-color: hsl(0 85% 60%);
+    box-shadow: 0 0 22px 2px hsl(0 85% 60% / 0.45);
+  }
+}
+
+.table-alert-waiter {
+  animation: table-blink-waiter 1s ease-in-out infinite;
+}
+
+.table-alert-bill {
+  animation: table-blink-bill 1s ease-in-out infinite;
+}

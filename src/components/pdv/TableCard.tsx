@@ -1,4 +1,4 @@
-import { Clock, Users, DollarSign, BellRing } from 'lucide-react';
+import { Clock, Users, DollarSign, BellRing, ReceiptText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,9 @@ export function TableCard({ table, onClick }: TableCardProps) {
   const waiterCalled =
     !!table.waiter_called_at &&
     differenceInMinutes(new Date(), new Date(table.waiter_called_at)) < 15;
+  const billRequested =
+    !!table.bill_requested_at &&
+    differenceInMinutes(new Date(), new Date(table.bill_requested_at)) < 30;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -56,7 +59,9 @@ export function TableCard({ table, onClick }: TableCardProps) {
     <Card 
       className={cn(
         "cursor-pointer transition-all hover:scale-105 hover:shadow-lg border-2 relative",
-        status.bgColor
+        status.bgColor,
+        billRequested && "table-alert-bill",
+        !billRequested && waiterCalled && "table-alert-waiter"
       )}
       onClick={onClick}
     >
@@ -86,12 +91,19 @@ export function TableCard({ table, onClick }: TableCardProps) {
         </div>
 
         <div className="space-y-2">
+          {billRequested && (
+            <div className="flex items-center gap-2 rounded-lg bg-destructive/20 px-2 py-1 text-xs font-semibold text-destructive animate-pulse">
+              <ReceiptText className="h-3.5 w-3.5" />
+              <span>Pedindo a conta</span>
+            </div>
+          )}
           {waiterCalled && (
             <div className="flex items-center gap-2 rounded-lg bg-primary/20 px-2 py-1 text-xs font-semibold text-primary animate-pulse">
               <BellRing className="h-3.5 w-3.5" />
               <span>Chamando garçom</span>
             </div>
           )}
+
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4" />
             <span>Capacidade: {table.capacity}</span>

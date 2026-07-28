@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Plus, Filter, RefreshCw } from 'lucide-react';
+import { differenceInMinutes } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { TableCard } from './TableCard';
 import { useTablesWithOrders } from '@/hooks/useTables';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { supabase } from '@/integrations/supabase/client';
 import { TableWithOrder, TableStatus } from '@/types/pdv';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,6 +35,7 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
   const { tables, isLoading, error, refetch } = useTablesWithOrders();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [refreshSeconds, setRefreshSeconds] = useState<string>(loadRefreshPref);
+  const { startLoopingSound, stopLoopingSound } = useNotificationSound();
 
   useEffect(() => {
     try {
@@ -47,6 +51,40 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
     return () => window.clearInterval(id);
   }, [refreshSeconds, refetch]);
 
+  // Mesas em alerta (chamou garçom ou pediu a conta)
+  const alertTables = tables.filter((t) => {
+    const called =
+      !!t.waiter_called_at && differenceInMinutes(new Date(), new Date(t.waiter_called_at)) < 15;
+    const bill =
+      !!t.bill_requested_at && differenceInMinutes(new Date(), new Date(t.bill_requested_at)) < 30;
+    return called || bill;
+  });
+  const hasAlert = alertTables.length > 0;
+
+  useEffect(() => {
+    if (hasAlert) {
+      startLoopingSound();
+    } else {
+      stopLoopingSound();
+    }
+    return () => stopLoopingSound();
+  }, [hasAlert, startLoopingSound, stopLoopingSound]);
+
+  const handleTableClick = async (table: TableWithOrder) => {
+    if (table.waiter_called_at || table.bill_requested_at) {
+      stopLoopingSound();
+      try {
+        await supabase
+          .from('tables')
+          .update({ waiter_called_at: null, bill_requested_at: null })
+          .eq('id', table.id);
+        refetch();
+      } catch {
+        /* ignore */
+      }
+    }
+    onTableClick(table);
+  };
 
 
   if (isLoading) {
@@ -171,7 +209,7 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
           <TableCard
             key={table.id}
             table={table}
-            onClick={() => onTableClick(table)}
+            onClick={() => handleTableClick(table)}
           />
         ))}
       </div>

@@ -4410,6 +4410,7 @@ export type Database = {
       }
       tables: {
         Row: {
+          bill_requested_at: string | null
           capacity: number | null
           created_at: string | null
           current_order_id: number | null
@@ -4422,6 +4423,7 @@ export type Database = {
           waiter_called_at: string | null
         }
         Insert: {
+          bill_requested_at?: string | null
           capacity?: number | null
           created_at?: string | null
           current_order_id?: number | null
@@ -4434,6 +4436,7 @@ export type Database = {
           waiter_called_at?: string | null
         }
         Update: {
+          bill_requested_at?: string | null
           capacity?: number | null
           created_at?: string | null
           current_order_id?: number | null
