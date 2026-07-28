@@ -100,7 +100,27 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
             Reservadas ({reserved.length})
           </ToggleGroupItem>
         </ToggleGroup>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Atualizar
+          </Button>
+          <Select value={refreshSeconds} onValueChange={setRefreshSeconds}>
+            <SelectTrigger className="w-[150px] h-9 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {REFRESH_OPTIONS.map((opt) => (
+                <SelectItem key={opt} value={opt} className="text-xs">
+                  {opt === '0' ? 'Sem atualização' : `A cada ${opt}s`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
