@@ -19,6 +19,7 @@ import { useBusinessHours, isStoreCurrentlyOpen } from '@/hooks/useBusinessHours
 import { AddressSelector } from '@/components/checkout/AddressSelector';
 import { PaymentMethod } from '@/types';
 import { cn } from '@/lib/utils';
+import { getTableSession } from '@/lib/tableSession';
 import { useTheme } from '@/hooks/useTheme';
 import { useRestaurantTracking } from '@/hooks/useRestaurantTracking';
 import { trackPurchase } from '@/lib/tracking';
@@ -113,8 +114,11 @@ const Checkout = () => {
   const cardOnlineProvider = pickProviderForMethod(onlineMethods, 'credit_card');
 
   const savedData = loadCheckoutFromStorage();
+  const tableNumber = getTableSession();
 
-  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>(savedData?.deliveryType || 'delivery');
+  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>(
+    tableNumber !== null ? 'pickup' : savedData?.deliveryType || 'delivery',
+  );
   const [deliveryData, setDeliveryData] = useState({
     name: savedData?.name || '',
     phone: savedData?.phone || '',
@@ -298,9 +302,11 @@ const Checkout = () => {
     try {
       const order = await createOrder.mutateAsync({
         order: {
-          customer_name: deliveryData.name,
+          customer_name: tableNumber !== null ? `Mesa ${tableNumber} - ${deliveryData.name}` : deliveryData.name,
           customer_phone: deliveryData.phone,
-          address_street: deliveryType === 'delivery' ? deliveryData.street : 'Retirada no local',
+          address_street: deliveryType === 'delivery'
+            ? deliveryData.street
+            : tableNumber !== null ? `Mesa ${tableNumber}` : 'Retirada no local',
           address_number: deliveryType === 'delivery' ? deliveryData.number : '-',
           address_neighborhood: deliveryType === 'delivery' ? deliveryData.neighborhood : '-',
           total_amount: finalTotal,
@@ -464,8 +470,15 @@ const Checkout = () => {
           </div>
         )}
 
+        {tableNumber !== null && (
+          <div className="mx-4 mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3">
+            <p className="text-sm font-semibold text-primary">Pedido da Mesa {tableNumber}</p>
+            <p className="text-xs text-muted-foreground">Consumo no local — sem taxa de entrega.</p>
+          </div>
+        )}
+
         {/* Delivery Type Tabs */}
-        <div className="flex border-b border-border">
+        <div className={cn("flex border-b border-border", tableNumber !== null && "hidden")}>
           <button
             onClick={() => setDeliveryType('delivery')}
             className={cn(
