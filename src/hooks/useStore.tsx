@@ -159,6 +159,9 @@ export function useUpdateStoreConfig() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-config'] });
+      queryClient.invalidateQueries({ queryKey: ['store-open-status-config'] });
+      queryClient.invalidateQueries({ queryKey: ['store-open-status-hours'] });
+      queryClient.invalidateQueries({ queryKey: ['public-store-config'] });
     },
   });
 }
