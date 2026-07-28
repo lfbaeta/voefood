@@ -26,6 +26,7 @@ import { PizzaBuilderModal } from '@/components/menu/PizzaBuilderModal';
 import { Pizza as PizzaIcon } from 'lucide-react';
 import { formatBRL } from '@/lib/pizza';
 import { setTableSession, getTableSession } from '@/lib/tableSession';
+import { TableCallActions } from '@/components/menu/TableCallActions';
 
 
 interface EditingProduct {

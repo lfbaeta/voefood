@@ -9,6 +9,7 @@ export interface Table {
   capacity: number;
   status: TableStatus;
   current_order_id: number | null;
+  waiter_called_at?: string | null;
   created_at: string;
   updated_at: string;
 }

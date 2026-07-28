@@ -1,4 +1,4 @@
-import { Clock, Users, DollarSign } from 'lucide-react';
+import { Clock, Users, DollarSign, BellRing } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,9 @@ export function TableCard({ table, onClick }: TableCardProps) {
   const status = statusConfig[table.status];
   const order = table.current_order;
   const timeColor = order ? getTimeColor(order.opened_at) : null;
+  const waiterCalled =
+    !!table.waiter_called_at &&
+    differenceInMinutes(new Date(), new Date(table.waiter_called_at)) < 15;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -83,6 +86,12 @@ export function TableCard({ table, onClick }: TableCardProps) {
         </div>
 
         <div className="space-y-2">
+          {waiterCalled && (
+            <div className="flex items-center gap-2 rounded-lg bg-primary/20 px-2 py-1 text-xs font-semibold text-primary animate-pulse">
+              <BellRing className="h-3.5 w-3.5" />
+              <span>Chamando garçom</span>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Users className="h-4 w-4" />
             <span>Capacidade: {table.capacity}</span>
