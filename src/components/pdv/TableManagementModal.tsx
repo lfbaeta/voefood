@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Trash2, Edit2 } from 'lucide-react';
+import { Trash2, Edit2, QrCode } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useTablesWithOrders, useTableMutations } from '@/hooks/useTables';
 import { TableWithOrder, TableStatus } from '@/types/pdv';
+import { TableQRCodeModal } from './TableQRCodeModal';
 
 const statusConfig: Record<TableStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   available: { label: 'Livre', variant: 'outline' },
@@ -42,6 +43,7 @@ export function TableManagementModal({ open, onOpenChange }: TableManagementModa
   const [newTableName, setNewTableName] = useState('');
   const [newTableCapacity, setNewTableCapacity] = useState('4');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [qrTable, setQrTable] = useState<{ number: number; name: string | null } | null>(null);
 
   const { tables } = useTablesWithOrders();
   const { createTable, updateTable, deleteTable } = useTableMutations();
@@ -259,6 +261,13 @@ export function TableManagementModal({ open, onOpenChange }: TableManagementModa
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TableQRCodeModal
+        open={!!qrTable}
+        onOpenChange={(o) => !o && setQrTable(null)}
+        tableNumber={qrTable?.number ?? null}
+        tableName={qrTable?.name}
+      />
     </>
   );
 }
