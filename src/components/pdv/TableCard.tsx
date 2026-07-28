@@ -1,4 +1,4 @@
-import { Clock, Users, DollarSign, BellRing } from 'lucide-react';
+import { Clock, Users, DollarSign, BellRing, ReceiptText } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,9 @@ export function TableCard({ table, onClick }: TableCardProps) {
   const waiterCalled =
     !!table.waiter_called_at &&
     differenceInMinutes(new Date(), new Date(table.waiter_called_at)) < 15;
+  const billRequested =
+    !!table.bill_requested_at &&
+    differenceInMinutes(new Date(), new Date(table.bill_requested_at)) < 30;
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
