@@ -23,11 +23,11 @@ export function TableMap({ onTableClick, onAddTable }: TableMapProps) {
   const [refreshSeconds, setRefreshSeconds] = useState('0');
 
   useEffect(() => {
-    const minutes = Number(refreshSeconds);
-    if (!minutes) return;
+    const seconds = Number(refreshSeconds);
+    if (!seconds) return;
     const id = window.setInterval(() => {
       refetch();
-    }, minutes * 60 * 1000);
+    }, seconds * 1000);
     return () => window.clearInterval(id);
   }, [refreshSeconds, refetch]);
 
