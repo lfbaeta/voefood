@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 type StatusFilter = 'all' | 'available' | 'occupied' | 'requesting_bill' | 'reserved';
 
-// valores em minutos
-const REFRESH_OPTIONS = ['0', '1', '2', '5', '10', '15'] as const;
+// valores em segundos
+const REFRESH_OPTIONS = ['0', '5', '10', '15', '20', '30'] as const;
 
 interface TableMapProps {
   onTableClick: (table: TableWithOrder) => void;
