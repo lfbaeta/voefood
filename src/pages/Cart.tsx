@@ -215,6 +215,11 @@ const Cart = () => {
         {/* Footer */}
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border p-4 pb-6">
           <div className="mx-auto max-w-[1200px] space-y-4">
+            {!isStoreOpen && (
+              <div className="rounded-2xl bg-destructive/10 px-4 py-3 text-center text-sm font-medium text-destructive">
+                Loja fechada no momento — não estamos recebendo pedidos.
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Total</span>
               <span className="text-xl font-bold text-foreground">{formatCurrency(totalPrice)}</span>
@@ -223,8 +228,9 @@ const Cart = () => {
               onClick={() => navigate(`${basePath}/checkout`)}
               size="xl"
               className="w-full rounded-full"
+              disabled={!isStoreOpen}
             >
-              Continuar para pagamento
+              {isStoreOpen ? 'Continuar para pagamento' : 'Loja fechada'}
             </Button>
           </div>
         </div>
