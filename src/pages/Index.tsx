@@ -25,6 +25,7 @@ import { usePizzaSizes, usePizzaFlavors, type PizzaSize } from '@/hooks/usePizze
 import { PizzaBuilderModal } from '@/components/menu/PizzaBuilderModal';
 import { Pizza as PizzaIcon } from 'lucide-react';
 import { formatBRL } from '@/lib/pizza';
+import { setTableSession, getTableSession } from '@/lib/tableSession';
 
 
 interface EditingProduct {
@@ -82,6 +83,19 @@ const Index = () => {
   if (!slug && hasReseller === false && !resellerCheckLoading) {
     return <Navigate to="/setup" replace />;
   }
+
+  // Mesa lida via QR Code (?mesa=N)
+  const [tableNumber, setTableNumber] = useState<number | null>(() => getTableSession());
+  useEffect(() => {
+    const mesa = searchParams.get('mesa');
+    if (mesa) {
+      const n = parseInt(mesa, 10);
+      if (Number.isFinite(n)) {
+        setTableSession(n);
+        setTableNumber(n);
+      }
+    }
+  }, [searchParams]);
 
   // Check for last order on mount
   useEffect(() => {
@@ -239,6 +253,15 @@ const Index = () => {
       <div className="min-h-screen bg-background pb-24 mx-auto max-w-[1200px]">
         {/* Hero Header */}
         <HeroHeader store={store} />
+
+        {tableNumber !== null && (
+          <div className="mx-4 mt-4 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3">
+            <p className="text-sm font-semibold text-primary">Você está na Mesa {tableNumber}</p>
+            <p className="text-xs text-muted-foreground">
+              Seu pedido será enviado vinculado a esta mesa.
+            </p>
+          </div>
+        )}
 
         {/* Store Info */}
         <StoreInfo store={store} />
