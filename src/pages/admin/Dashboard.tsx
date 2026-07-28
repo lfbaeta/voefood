@@ -98,6 +98,8 @@ export default function Dashboard() {
   
   // Get current restaurant ID
   const { restaurantId, isLoading: loadingRestaurant } = useAdminRestaurant();
+  const { data: storeConfig } = useStoreConfig();
+  const updateStoreConfig = useUpdateStoreConfig();
 
   const getDateRange = (p: Period) => {
     const now = new Date();
