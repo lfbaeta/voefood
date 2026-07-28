@@ -31,7 +31,7 @@ export function useTablesWithOrders() {
   const queryClient = useQueryClient();
   const { restaurantId } = useAdminRestaurant();
 
-  const { data: tables = [], isLoading, error } = useQuery({
+  const { data: tables = [], isLoading, error, refetch } = useQuery({
     queryKey: ['tables-with-orders', restaurantId],
     queryFn: async () => {
       if (!restaurantId) return [];
@@ -88,7 +88,7 @@ export function useTablesWithOrders() {
     };
   }, [queryClient, restaurantId]);
 
-  return { tables, isLoading, error };
+  return { tables, isLoading, error, refetch };
 }
 
 export function useTableMutations() {

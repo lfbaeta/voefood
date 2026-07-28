@@ -44,6 +44,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { useNotificationSound } from '@/hooks/useNotificationSound';
 import { toast } from 'sonner';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
+import { useStoreConfig, useUpdateStoreConfig } from '@/hooks/useStore';
 
 type Period = 'today' | 'week' | 'month';
 
@@ -97,6 +98,8 @@ export default function Dashboard() {
   
   // Get current restaurant ID
   const { restaurantId, isLoading: loadingRestaurant } = useAdminRestaurant();
+  const { data: storeConfig } = useStoreConfig();
+  const updateStoreConfig = useUpdateStoreConfig();
 
   const getDateRange = (p: Period) => {
     const now = new Date();
@@ -349,7 +352,18 @@ export default function Dashboard() {
     }
   };
 
+  const handleStoreToggle = async (checked: boolean) => {
+    if (!storeConfig?.id) return;
+    try {
+      await updateStoreConfig.mutateAsync({ id: storeConfig.id, is_open: checked });
+      toast.success(checked ? 'Loja aberta' : 'Loja fechada');
+    } catch {
+      toast.error('Erro ao atualizar status da loja');
+    }
+  };
+
   const handleSoundToggle = (checked: boolean) => {
+
     setSoundEnabled(checked);
     setEnabled(checked);
     if (checked && pendingCount > 0) {
@@ -611,14 +625,30 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Real-time indicator */}
-        {autoRefresh && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground animate-fade-in">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span>Modo tempo real ativo</span>
-            <span className="text-xs">• Última atualização: {format(lastRefresh, 'HH:mm:ss')}</span>
+        {/* Real-time indicator + Store toggle */}
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground animate-fade-in">
+          {autoRefresh && (
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span>Modo tempo real ativo</span>
+              <span className="text-xs">• Última atualização: {format(lastRefresh, 'HH:mm:ss')}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 ml-auto">
+            <Store className={`w-4 h-4 ${storeConfig?.is_open ? 'text-green-500' : 'text-destructive'}`} />
+            <span className="text-xs font-medium text-foreground">
+              {storeConfig?.is_open ? 'Loja aberta' : 'Loja fechada'}
+            </span>
+            <Switch
+              checked={!!storeConfig?.is_open}
+              disabled={!storeConfig?.id || updateStoreConfig.isPending}
+              onCheckedChange={handleStoreToggle}
+              className="data-[state=checked]:bg-green-500"
+            />
           </div>
-        )}
+        </div>
+
 
         {loadError && !isLoading && (
           <Card className="border-destructive/50 bg-destructive/5">
