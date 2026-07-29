@@ -1936,9 +1936,6 @@ serve(async (req) => {
     const latestOutbound = [...ordered].reverse().find((m: any) =>
       m.direction === "out" && ["sent", "delivered", "read"].includes(String(m.status || ""))
     );
-    const latestQueuedOutbound = [...ordered].reverse().find((m: any) =>
-      m.direction === "out" && ["pending", "sent", "delivered", "read"].includes(String(m.status || ""))
-    );
     const latestSuccessfulOutbound = [...ordered].reverse().find((m: any) =>
       m.direction === "out" && ["sent", "delivered", "read"].includes(String(m.status || ""))
     );
