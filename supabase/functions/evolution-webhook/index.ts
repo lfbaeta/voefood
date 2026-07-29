@@ -439,6 +439,33 @@ async function processMessage(supa: any, instance: any, msg: ParsedMessage) {
     convId = convIns.id;
   }
 
+  // Dedupe de eco outbound sem ID (evita mensagens do agente duplicadas no chat)
+  if (msg.fromMe) {
+    const since = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    let q = supa
+      .from("wa_messages")
+      .select("id, wa_message_id, status")
+      .eq("conversation_id", convId)
+      .eq("direction", "out")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    q = msg.text ? q.eq("text", msg.text) : q;
+    const { data: localOut } = await q.maybeSingle();
+    if (localOut) {
+      const patch: Record<string, unknown> = {};
+      if (!localOut.wa_message_id && msg.waMsgId) patch.wa_message_id = msg.waMsgId;
+      const rank: Record<string, number> = { pending: 0, sent: 1, delivered: 2, read: 3 };
+      if (msg.status === "failed" || (rank[msg.status] ?? 0) > (rank[String(localOut.status ?? "")] ?? 0)) {
+        patch.status = msg.status;
+      }
+      if (Object.keys(patch).length > 0) {
+        await supa.from("wa_messages").update(patch).eq("id", localOut.id);
+      }
+      return;
+    }
+  }
+
   await supa.from("wa_messages").insert({
     restaurant_id: instance.restaurant_id,
     conversation_id: convId,
