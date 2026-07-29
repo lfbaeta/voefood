@@ -1939,6 +1939,9 @@ serve(async (req) => {
     const latestQueuedOutbound = [...ordered].reverse().find((m: any) =>
       m.direction === "out" && ["pending", "sent", "delivered", "read"].includes(String(m.status || ""))
     );
+    const latestSuccessfulOutbound = [...ordered].reverse().find((m: any) =>
+      m.direction === "out" && ["sent", "delivered", "read"].includes(String(m.status || ""))
+    );
     if (!latestInbound?.id) return skipped("no_inbound_message");
     if (latestOutbound?.created_at && new Date(latestOutbound.created_at) > new Date(latestInbound.created_at)) {
       return skipped("already_replied");
@@ -2005,7 +2008,7 @@ serve(async (req) => {
       restaurant_id: conv.restaurant_id,
     });
     if (claimError) {
-      if (claimError.code === "23505" && latestQueuedOutbound?.created_at && new Date(latestQueuedOutbound.created_at) > new Date(latestInbound.created_at)) {
+      if (claimError.code === "23505" && latestSuccessfulOutbound?.created_at && new Date(latestSuccessfulOutbound.created_at) > new Date(latestInbound.created_at)) {
         return skipped("duplicate_claim");
       }
       if (claimError.code === "23505") {
