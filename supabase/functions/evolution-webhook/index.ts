@@ -170,6 +170,7 @@ function normalizeDbStatus(status: any, fromMe: boolean): string {
   // Evolution v2 devolve "PENDING" quando apenas aceitou a mensagem na fila.
   // Não marcar como enviada até chegar SEND_MESSAGE/MESSAGES_UPDATE com ACK real.
   if (["pending", "pending_ack", "0"].includes(s) && fromMe) return "pending";
+  if (["error", "failed", "send_error", "message_error"].includes(s)) return "failed";
   if (["pending", "sent", "delivered", "read", "failed"].includes(s)) return s;
   if (["server_ack", "1"].includes(s)) return "sent";
   if (["delivery_ack", "played", "2"].includes(s)) return "delivered";
