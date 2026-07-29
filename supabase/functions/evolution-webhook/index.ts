@@ -180,6 +180,14 @@ function normalizeDbStatus(status: any, fromMe: boolean): string {
 
 function extractStatusCandidate(obj: any): any {
   if (!obj || typeof obj !== "object") return obj;
+  const stubValues = [
+    ...(Array.isArray(obj?.messageStubParameters) ? obj.messageStubParameters : []),
+    ...(Array.isArray(obj?.update?.messageStubParameters) ? obj.update.messageStubParameters : []),
+    ...(Array.isArray(obj?.messageUpdate?.messageStubParameters) ? obj.messageUpdate.messageStubParameters : []),
+  ].map((value) => String(value));
+  // WhatsApp/Baileys NACK 463: a Evolution aceita com PENDING, mas o WhatsApp
+  // rejeita a entrega logo depois. Não pode ficar como mensagem enviada.
+  if (stubValues.includes("463")) return "failed";
   return obj?.status ??
     obj?.Status ??
     obj?.update?.status ??
