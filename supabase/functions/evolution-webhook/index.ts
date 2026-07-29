@@ -170,12 +170,27 @@ function normalizeDbStatus(status: any, fromMe: boolean): string {
   // Evolution v2 devolve "PENDING" quando apenas aceitou a mensagem na fila.
   // Não marcar como enviada até chegar SEND_MESSAGE/MESSAGES_UPDATE com ACK real.
   if (["pending", "pending_ack", "0"].includes(s) && fromMe) return "pending";
-  if (["error", "failed", "send_error", "message_error"].includes(s)) return "failed";
+  if (["error", "failed", "send_error", "message_error", "rejected", "nack"].includes(s)) return "failed";
   if (["pending", "sent", "delivered", "read", "failed"].includes(s)) return s;
   if (["server_ack", "1"].includes(s)) return "sent";
   if (["delivery_ack", "played", "2"].includes(s)) return "delivered";
   if (["read_ack", "3", "4"].includes(s)) return "read";
   return fromMe ? "sent" : "delivered";
+}
+
+function extractStatusCandidate(obj: any): any {
+  if (!obj || typeof obj !== "object") return obj;
+  return obj?.status ??
+    obj?.Status ??
+    obj?.update?.status ??
+    obj?.update?.Status ??
+    obj?.messageUpdate?.status ??
+    obj?.messageUpdate?.Status ??
+    obj?.message?.status ??
+    obj?.message?.Status ??
+    obj?.data?.status ??
+    obj?.data?.Status ??
+    null;
 }
 
 
@@ -222,6 +237,9 @@ type ParsedMessage = {
 };
 
 function parseV2Message(m: any): ParsedMessage | null {
+  if (Array.isArray(m)) return null;
+  const original = m;
+  m = m?.message ?? m?.data ?? m;
   if (!m?.key?.id && !m?.key?.remoteJid) return null;
   const jidCandidates = [
     m.key.remoteJid,
@@ -250,7 +268,7 @@ function parseV2Message(m: any): ParsedMessage | null {
     text: extractText(m.message),
     contentType: detectContentType(m.message),
     media: extractMedia(m.message),
-    status: normalizeDbStatus(m?.status ?? m?.update?.status, fromMe),
+    status: normalizeDbStatus(extractStatusCandidate(original) ?? extractStatusCandidate(m), fromMe),
   };
 }
 
@@ -576,7 +594,7 @@ serve(async (req) => {
     }
 
     if (["MESSAGES_UPSERT", "MESSAGES_UPDATE", "SEND_MESSAGE"].includes(eventKey)) {
-      const messages = Array.isArray(data?.messages) ? data.messages : [data];
+      const messages = Array.isArray(data) ? data : (Array.isArray(data?.messages) ? data.messages : [data]);
       for (const raw of messages) {
         const parsed = parseV2Message(raw);
         if (parsed) await processMessage(supa, instance, parsed);
