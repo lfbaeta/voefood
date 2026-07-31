@@ -580,13 +580,37 @@ serve(async (req) => {
       await assertAccessTo(inst.restaurant_id);
       const cfg = await getCfgForReseller(inst.reseller_id);
 
-      const uuid: string | null = inst.instance_uuid || null;
-      const instanceToken: string | null = inst.instance_token || null;
-      if (!uuid || !instanceToken) {
-        return json({ error: "Instância sem UUID ou token. Recrie ou sincronize a instância." }, 400);
+      let uuid: string | null = inst.instance_uuid || null;
+      let instanceToken: string | null = inst.instance_token || null;
+      let webhookToken: string | null = inst.webhook_token || null;
+
+      // O servidor Evolution pode ter sido reinstalado/limpo: nesse caso a
+      // instância existe só no banco. Detecta e recria automaticamente.
+      const probe = await evoFetch(
+        cfg,
+        `/instance/connectionState/${encodeURIComponent(inst.instance_name)}`,
+        { method: "GET" },
+        instanceToken,
+      );
+      const missingRemote =
+        probe.status === 404 ||
+        /does not exist|não existe|not found/i.test(String(probe.message ?? ""));
+
+      if (missingRemote || !uuid || !instanceToken) {
+        console.log(`[connect_instance] instância ausente no servidor, recriando: ${inst.instance_name}`);
+        const rec = await recreateRemoteInstance(cfg, supaAdmin, inst, supabaseUrl);
+        if (!rec.ok) {
+          return json({ ok: false, error: `Não foi possível recriar a instância no servidor Evolution: ${rec.error}` }, 400);
+        }
+        uuid = rec.uuid!;
+        instanceToken = rec.token!;
+        webhookToken = inst.webhook_token || (
+          await supaAdmin.from("evolution_instances").select("webhook_token").eq("id", inst.id).maybeSingle()
+        ).data?.webhook_token;
       }
 
-      const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
+      const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${webhookToken}`;
+
 
       // Check current connection state (try v2 then Go)
       try {
