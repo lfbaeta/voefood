@@ -246,6 +246,79 @@ async function configureWebhook(
   };
 }
 
+/**
+ * Recria a instância no servidor Evolution mantendo o mesmo registro no banco.
+ * Usado quando o servidor foi reinstalado/limpo e a instância local ficou órfã.
+ */
+async function recreateRemoteInstance(
+  cfg: EvoCfg,
+  supaAdmin: any,
+  inst: any,
+  supabaseUrl: string,
+): Promise<{ ok: boolean; error?: string; uuid?: string; token?: string; webhook_ok?: boolean }> {
+  const generatedToken = crypto.randomUUID();
+  const attempts = [
+    { label: "go", body: { name: inst.instance_name, token: generatedToken } },
+    {
+      label: "v2",
+      body: {
+        instanceName: inst.instance_name,
+        token: generatedToken,
+        qrcode: true,
+        integration: "WHATSAPP-BAILEYS",
+      },
+    },
+  ];
+
+  let res: EvoFetchResult | null = null;
+  for (const a of attempts) {
+    console.log(`[recreateRemoteInstance] -> POST /instance/create variant=${a.label} name=${inst.instance_name}`);
+    res = await evoFetch(cfg, "/instance/create", { method: "POST", body: JSON.stringify(a.body) });
+    console.log(`[recreateRemoteInstance] <- variant=${a.label} status=${res.status} ok=${res.ok}`);
+    if (res.ok) break;
+  }
+  if (!res || !res.ok) {
+    return { ok: false, error: evoErrorMessage(res, res?.status ?? 0) };
+  }
+
+  const created = res.body?.data ?? res.body?.instance ?? res.body ?? {};
+  const uuid: string =
+    created?.id ??
+    created?.instanceId ??
+    created?.uuid ??
+    created?.instance?.instanceId ??
+    created?.instance?.id ??
+    inst.instance_uuid;
+  const token: string =
+    created?.token ??
+    created?.hash?.apikey ??
+    created?.apikey ??
+    (typeof created?.hash === "string" ? created.hash : null) ??
+    generatedToken;
+  const webhookToken: string = inst.webhook_token || crypto.randomUUID().replace(/-/g, "");
+
+  await supaAdmin
+    .from("evolution_instances")
+    .update({
+      instance_uuid: uuid,
+      instance_token: token,
+      webhook_token: webhookToken,
+      status: "disconnected",
+      qr_code: null,
+      qr_expires_at: null,
+      phone_number: null,
+    })
+    .eq("id", inst.id);
+
+  const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${webhookToken}`;
+  const wh = await configureWebhook(cfg, uuid, token, webhookUrl, inst.instance_name);
+  if (!wh.ok) console.warn(`[recreateRemoteInstance] webhook falhou: ${wh.error}`);
+
+  return { ok: true, uuid, token, webhook_ok: wh.ok };
+}
+
+
+
 function parseInstanceFromList(item: any) {
   const name: string = item?.name || item?.instanceName || item?.instance?.instanceName || "";
   const uuid: string | null = item?.id ?? item?.instanceId ?? item?.uuid ?? item?.instance?.id ?? null;
