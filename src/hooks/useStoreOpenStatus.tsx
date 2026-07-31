@@ -124,9 +124,7 @@ export function useStoreOpenStatusBySlug(slug: string | undefined): StoreOpenSta
       if (!slug) return null;
       
       const { data, error } = await supabase
-        .from('restaurants_public' as any)
-        .select('id')
-        .eq('slug', slug)
+        .rpc('get_public_restaurant', { p_slug: slug })
         .maybeSingle();
 
       if (error) throw error;
