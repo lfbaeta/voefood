@@ -1,0 +1,1 @@
+ALTER TABLE public.global_ai_config ADD COLUMN IF NOT EXISTS openai_api_key text;

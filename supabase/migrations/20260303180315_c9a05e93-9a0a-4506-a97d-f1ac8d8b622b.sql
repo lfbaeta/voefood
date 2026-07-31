@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Resellers public view accessible" ON public.resellers;

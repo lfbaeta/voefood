@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+Disallow: /reseller
+Disallow: /reseller/
+Disallow: /waiter
+Disallow: /waiter/
+Disallow: /kitchen
+Disallow: /kitchen/
+Disallow: /setup
+Disallow: /auth
