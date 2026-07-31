@@ -501,9 +501,17 @@ serve(async (req) => {
         });
         console.log(`[create_instance] <- v2 status=${v2Res.status} ok=${v2Res.ok}`);
         if (v2Res.ok) createRes = v2Res;
+        else if (v2Res.status === 401 || v2Res.status === 403 || createRes.status === 401 || createRes.status === 403) {
+          return json({
+            ok: false,
+            error: "O servidor Evolution recusou a requisição (403 Forbidden). A Global API Key configurada é inválida ou não tem permissão para criar instâncias. Verifique a URL e a API Key em Revenda → WhatsApp (Evolution) e teste a conexão.",
+            response: v2Res.body ?? createRes.body,
+          }, 400);
+        }
         else {
           return json({ ok: false, error: v2Res.message || createRes.message || `Falha ao criar instância (status ${v2Res.status})`, response: v2Res.body }, 400);
         }
+
       }
 
       const body = createRes.body ?? {};
