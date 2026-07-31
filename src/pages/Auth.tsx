@@ -90,9 +90,7 @@ const Auth = () => {
       if (slug) {
         // Descobre o restaurante alvo pelo slug para checar autorização de super admin/reseller.
         const { data: targetRestaurant } = await supabase
-          .from('restaurants_public')
-          .select('id')
-          .eq('slug', slug)
+          .rpc('get_public_restaurant', { p_slug: slug })
           .maybeSingle();
 
         // Super admin global (app_role = 'admin'): acesso a qualquer restaurante.

@@ -133,10 +133,7 @@ export function useRestaurantBySlug(slug: string | undefined) {
     queryFn: async () => {
       if (!slug) return null;
       const { data, error } = await supabase
-        .from('restaurants_public' as any)
-        .select('*')
-        .eq('slug', slug)
-        .eq('is_active', true)
+        .rpc('get_public_restaurant', { p_slug: slug })
         .maybeSingle();
 
       if (error) throw error;
