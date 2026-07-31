@@ -61,6 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkRoles = async (userId: string) => {
     try {
+      // Super admin (app_role = 'admin') tem acesso total a qualquer painel
+      const { data: isSuper } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'admin',
+      });
+      if (isSuper === true) {
+        setIsAdmin(true);
+      }
+
       // Check if user is a reseller (highest priority)
       const { data: resellerData, error: resellerError } = await supabase
         .from('resellers')
@@ -75,10 +84,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsReseller(!!resellerData);
 
       // If reseller, also set as admin (reseller has full access)
-      if (resellerData) {
+      if (resellerData || isSuper === true) {
         setIsAdmin(true);
         return;
       }
+
 
       // Check if user is a restaurant admin
       const { data: restaurantAdminData, error: adminError } = await supabase
