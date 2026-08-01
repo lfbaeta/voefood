@@ -1,0 +1,1 @@
+CREATE POLICY "Public buckets are viewable" ON storage.buckets FOR SELECT TO authenticated, anon USING (true);
