@@ -635,7 +635,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2 ml-auto">
+          <div className="flex items-center gap-3 bg-muted/50 rounded-lg px-3 py-2 ml-auto">
             <Store className={`w-4 h-4 ${storeConfig?.is_open ? 'text-green-500' : 'text-destructive'}`} />
             <span className="text-xs font-medium text-foreground">
               {storeConfig?.is_open ? 'Loja aberta' : 'Loja fechada'}
@@ -646,7 +646,17 @@ export default function Dashboard() {
               onCheckedChange={handleStoreToggle}
               className="data-[state=checked]:bg-green-500"
             />
+            <Button
+              size="sm"
+              disabled={!storeConfig?.id || updateStoreConfig.isPending}
+              onClick={() => handleStoreToggle(!storeConfig?.is_open)}
+              className={`gap-2 text-white ${storeConfig?.is_open ? 'bg-destructive hover:bg-destructive/90' : 'bg-green-600 hover:bg-green-700'}`}
+            >
+              <Store className="w-4 h-4" />
+              {storeConfig?.is_open ? 'Fechar loja' : 'Abrir loja'}
+            </Button>
           </div>
+
         </div>
 
 
