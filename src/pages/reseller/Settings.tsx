@@ -12,6 +12,7 @@ import { ColorSettings } from '@/components/reseller/ColorSettings';
 import { LandingPageSettings } from '@/components/reseller/LandingPageSettings';
 import { useDemoGuard } from '@/hooks/useDemoGuard';
 import { GlobalAIKeyCard } from '@/components/reseller/GlobalAIKeyCard';
+import { ChangePasswordCard } from '@/components/reseller/ChangePasswordCard';
 
 
 function SettingsContent() {
@@ -155,6 +156,10 @@ function SettingsContent() {
           </CardContent>
         </Card>
       </form>
+
+      <ChangePasswordCard />
+
+
 
       {reseller && (
         <ColorSettings 
