@@ -157,6 +157,10 @@ function SettingsContent() {
         </Card>
       </form>
 
+      <ChangePasswordCard />
+
+
+
       {reseller && (
         <ColorSettings 
           reseller={reseller as any} 
