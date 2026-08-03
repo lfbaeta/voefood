@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import { lazyWithRetry } from "@/lib/lazyWithRetry";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,69 +17,69 @@ import InitialRedirect from "./pages/InitialRedirect";
 import AdminOnRoot from "./pages/AdminOnRoot";
 
 // Lazy: client
-const Cart = lazy(() => import("./pages/Cart"));
-const Checkout = lazy(() => import("./pages/Checkout"));
-const OnlinePayment = lazy(() => import("./pages/OnlinePayment"));
-const OrderStatus = lazy(() => import("./pages/OrderStatus"));
-const MyOrders = lazy(() => import("./pages/MyOrders"));
-const Auth = lazy(() => import("./pages/Auth"));
-const RestaurantSuspended = lazy(() => import("./pages/RestaurantSuspended"));
-const Landing = lazy(() => import("./pages/Landing"));
+const Cart = lazyWithRetry(() => import("./pages/Cart"));
+const Checkout = lazyWithRetry(() => import("./pages/Checkout"));
+const OnlinePayment = lazyWithRetry(() => import("./pages/OnlinePayment"));
+const OrderStatus = lazyWithRetry(() => import("./pages/OrderStatus"));
+const MyOrders = lazyWithRetry(() => import("./pages/MyOrders"));
+const Auth = lazyWithRetry(() => import("./pages/Auth"));
+const RestaurantSuspended = lazyWithRetry(() => import("./pages/RestaurantSuspended"));
+const Landing = lazyWithRetry(() => import("./pages/Landing"));
 
 // Lazy: admin
-const AdminOrders = lazy(() => import("./pages/admin/Orders"));
-const AdminProducts = lazy(() => import("./pages/admin/Products"));
-const AdminPizzeria = lazy(() => import("./pages/admin/Pizzeria"));
-const AdminCategories = lazy(() => import("./pages/admin/Categories"));
-const AdminCoupons = lazy(() => import("./pages/admin/Coupons"));
-const AdminHours = lazy(() => import("./pages/admin/Hours"));
-const AdminSettings = lazy(() => import("./pages/admin/Settings"));
-const AdminSetup = lazy(() => import("./pages/admin/Setup"));
-const AdminDeliveryZones = lazy(() => import("./pages/admin/DeliveryZones"));
-const AdminAddons = lazy(() => import("./pages/admin/Addons"));
-const AdminPDV = lazy(() => import("./pages/admin/PDV"));
-const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
-const AdminWaiters = lazy(() => import("./pages/admin/Waiters"));
-const AdminWhatsApp = lazy(() => import("./pages/admin/WhatsAppConnections"));
-const AdminChat = lazy(() => import("./pages/admin/Chat"));
-const AdminAIAgents = lazy(() => import("./pages/admin/AIAgents"));
-const AdminImageEnhancer = lazy(() => import("./pages/admin/ImageEnhancer"));
-const AdminCashRegister = lazy(() => import("./pages/admin/CashRegister"));
-const AdminFiscalPanel = lazy(() => import("./pages/admin/FiscalPanel"));
-const AdminPrintSettings = lazy(() => import("./pages/admin/PrintSettings"));
-const AdminStock = lazy(() => import("./pages/admin/Stock"));
-const AdminStockMovements = lazy(() => import("./pages/admin/StockMovements"));
-const AdminStockSuppliers = lazy(() => import("./pages/admin/StockSuppliers"));
-const AdminStockPurchases = lazy(() => import("./pages/admin/StockPurchases"));
-const AdminStockRecipes = lazy(() => import("./pages/admin/StockRecipes"));
-const AdminStockReports = lazy(() => import("./pages/admin/StockReports"));
-const AdminDrivers = lazy(() => import("./pages/admin/Drivers"));
-const AdminDeliveryMap = lazy(() => import("./pages/admin/DeliveryMap"));
-const DriverApp = lazy(() => import("./pages/DriverApp"));
+const AdminOrders = lazyWithRetry(() => import("./pages/admin/Orders"));
+const AdminProducts = lazyWithRetry(() => import("./pages/admin/Products"));
+const AdminPizzeria = lazyWithRetry(() => import("./pages/admin/Pizzeria"));
+const AdminCategories = lazyWithRetry(() => import("./pages/admin/Categories"));
+const AdminCoupons = lazyWithRetry(() => import("./pages/admin/Coupons"));
+const AdminHours = lazyWithRetry(() => import("./pages/admin/Hours"));
+const AdminSettings = lazyWithRetry(() => import("./pages/admin/Settings"));
+const AdminSetup = lazyWithRetry(() => import("./pages/admin/Setup"));
+const AdminDeliveryZones = lazyWithRetry(() => import("./pages/admin/DeliveryZones"));
+const AdminAddons = lazyWithRetry(() => import("./pages/admin/Addons"));
+const AdminPDV = lazyWithRetry(() => import("./pages/admin/PDV"));
+const AdminDashboard = lazyWithRetry(() => import("./pages/admin/Dashboard"));
+const AdminWaiters = lazyWithRetry(() => import("./pages/admin/Waiters"));
+const AdminWhatsApp = lazyWithRetry(() => import("./pages/admin/WhatsAppConnections"));
+const AdminChat = lazyWithRetry(() => import("./pages/admin/Chat"));
+const AdminAIAgents = lazyWithRetry(() => import("./pages/admin/AIAgents"));
+const AdminImageEnhancer = lazyWithRetry(() => import("./pages/admin/ImageEnhancer"));
+const AdminCashRegister = lazyWithRetry(() => import("./pages/admin/CashRegister"));
+const AdminFiscalPanel = lazyWithRetry(() => import("./pages/admin/FiscalPanel"));
+const AdminPrintSettings = lazyWithRetry(() => import("./pages/admin/PrintSettings"));
+const AdminStock = lazyWithRetry(() => import("./pages/admin/Stock"));
+const AdminStockMovements = lazyWithRetry(() => import("./pages/admin/StockMovements"));
+const AdminStockSuppliers = lazyWithRetry(() => import("./pages/admin/StockSuppliers"));
+const AdminStockPurchases = lazyWithRetry(() => import("./pages/admin/StockPurchases"));
+const AdminStockRecipes = lazyWithRetry(() => import("./pages/admin/StockRecipes"));
+const AdminStockReports = lazyWithRetry(() => import("./pages/admin/StockReports"));
+const AdminDrivers = lazyWithRetry(() => import("./pages/admin/Drivers"));
+const AdminDeliveryMap = lazyWithRetry(() => import("./pages/admin/DeliveryMap"));
+const DriverApp = lazyWithRetry(() => import("./pages/DriverApp"));
 
 
 // Lazy: waiter / kitchen
-const WaiterAccess = lazy(() => import("./pages/WaiterAccess"));
-const WaiterDashboard = lazy(() => import("./pages/WaiterDashboard"));
-const Kitchen = lazy(() => import("./pages/Kitchen"));
-const KitchenLogin = lazy(() => import("./pages/KitchenLogin"));
+const WaiterAccess = lazyWithRetry(() => import("./pages/WaiterAccess"));
+const WaiterDashboard = lazyWithRetry(() => import("./pages/WaiterDashboard"));
+const Kitchen = lazyWithRetry(() => import("./pages/Kitchen"));
+const KitchenLogin = lazyWithRetry(() => import("./pages/KitchenLogin"));
 
 // Lazy: reseller
-const ResellerDashboard = lazy(() => import("./pages/reseller/Dashboard"));
-const ResellerRestaurants = lazy(() => import("./pages/reseller/Restaurants"));
-const ResellerRestaurantDetails = lazy(() => import("./pages/reseller/RestaurantDetails"));
-const ResellerSubscriptions = lazy(() => import("./pages/reseller/Subscriptions"));
-const ResellerReports = lazy(() => import("./pages/reseller/Reports"));
-const ResellerSettings = lazy(() => import("./pages/reseller/Settings"));
-const ResellerPlans = lazy(() => import("./pages/reseller/Plans"));
-const ResellerBusinessTypes = lazy(() => import("./pages/reseller/BusinessTypes"));
-const ResellerMercadoPago = lazy(() => import("./pages/reseller/MercadoPago"));
-const ResellerMercadoPagoGuide = lazy(() => import("./pages/reseller/MercadoPagoGuide"));
-const ResellerDocs = lazy(() => import("./pages/reseller/Docs"));
-const ResellerWhatsApp = lazy(() => import("./pages/reseller/WhatsAppEvolution"));
-const ResellerAIRouting = lazy(() => import("./pages/reseller/AIRouting"));
-const ResellerSetup = lazy(() => import("./pages/ResellerSetup"));
-const SetupRouteGuard = lazy(() => import("./pages/SetupRouteGuard"));
+const ResellerDashboard = lazyWithRetry(() => import("./pages/reseller/Dashboard"));
+const ResellerRestaurants = lazyWithRetry(() => import("./pages/reseller/Restaurants"));
+const ResellerRestaurantDetails = lazyWithRetry(() => import("./pages/reseller/RestaurantDetails"));
+const ResellerSubscriptions = lazyWithRetry(() => import("./pages/reseller/Subscriptions"));
+const ResellerReports = lazyWithRetry(() => import("./pages/reseller/Reports"));
+const ResellerSettings = lazyWithRetry(() => import("./pages/reseller/Settings"));
+const ResellerPlans = lazyWithRetry(() => import("./pages/reseller/Plans"));
+const ResellerBusinessTypes = lazyWithRetry(() => import("./pages/reseller/BusinessTypes"));
+const ResellerMercadoPago = lazyWithRetry(() => import("./pages/reseller/MercadoPago"));
+const ResellerMercadoPagoGuide = lazyWithRetry(() => import("./pages/reseller/MercadoPagoGuide"));
+const ResellerDocs = lazyWithRetry(() => import("./pages/reseller/Docs"));
+const ResellerWhatsApp = lazyWithRetry(() => import("./pages/reseller/WhatsAppEvolution"));
+const ResellerAIRouting = lazyWithRetry(() => import("./pages/reseller/AIRouting"));
+const ResellerSetup = lazyWithRetry(() => import("./pages/ResellerSetup"));
+const SetupRouteGuard = lazyWithRetry(() => import("./pages/SetupRouteGuard"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
