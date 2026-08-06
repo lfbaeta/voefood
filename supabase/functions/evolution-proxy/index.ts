@@ -735,8 +735,8 @@ serve(async (req) => {
           }
 
           if (!qr) {
-            for (let i = 0; i < 4; i++) {
-              await new Promise((r) => setTimeout(r, 1500));
+            for (let i = 0; i < 6; i++) {
+              await new Promise((r) => setTimeout(r, 2000));
               const current = await checkConnectionFor(safeName, newUuid, newToken);
               if (current.connected) return { ok: true, qr: null, response: { connected: true } };
               if (current.qr) {
