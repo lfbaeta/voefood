@@ -86,7 +86,7 @@ export function HeroHeader({ store }: HeroHeaderProps) {
             <Sparkles className="h-4 w-4 text-primary animate-pulse" />
           </div>
           <h1 className="text-2xl font-bold text-white drop-shadow-lg">
-            {store.name}
+            {store.name} — Cardápio Digital
           </h1>
         </div>
       </div>
