@@ -248,6 +248,28 @@ const Index = () => {
         {(store.cover_url || store.logo_url) && (
           <meta name="twitter:image" content={store.cover_url || store.logo_url} />
         )}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Restaurant',
+            name: store.name,
+            description: `Peça online no ${store.name}. ${labels.heroTagline}.`,
+            url: `${window.location.origin}${basePath || '/'}`,
+            ...(store.logo_url || store.cover_url
+              ? { image: store.cover_url || store.logo_url }
+              : {}),
+            ...((store as any).address
+              ? {
+                  address: {
+                    '@type': 'PostalAddress',
+                    streetAddress: (store as any).address,
+                    addressLocality: (store as any).city ?? undefined,
+                  },
+                }
+              : {}),
+            ...((store as any).phone ? { telephone: (store as any).phone } : {}),
+          })}
+        </script>
       </Helmet>
 
       <div className="min-h-screen bg-background pb-24 mx-auto max-w-[1200px]">
