@@ -282,13 +282,20 @@ export function TableOrderScreen({ table, onBack, onCheckout, onTableTransferred
         </Button>
         {onCheckout && (
           <Button
-            className="flex-1"
+            className="flex-1 h-12 text-lg"
             onClick={onCheckout}
             disabled={activeItems.length === 0}
           >
             Fechar Mesa
           </Button>
         )}
+        <Button
+          variant="secondary"
+          className="flex-1 h-12 text-lg"
+          onClick={handleCancelOrder}
+        >
+          Finalizar Atendimento
+        </Button>
       </div>
 
       {/* Add Item Modal */}
