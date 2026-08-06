@@ -1060,14 +1060,21 @@ serve(async (req) => {
       ];
 
       let lastErr: string | undefined;
+      let lastStatus: number | undefined;
       let success = false;
+      
+      console.log(`[delete_instance] Attempting to delete "${instanceName}" from server at ${cfg.url}`);
+
       for (const a of attempts) {
-        const resp = await evoFetch(cfg, a.path, { method: a.method, headers: (a as any).headers });
-        if (resp.ok || resp.status === 404) {
+        const res = await evoFetch(cfg, a.path, { method: a.method, headers: (a as any).headers });
+        console.log(`[delete_instance] attempt=${a.path} status=${res.status} ok=${res.ok}`);
+        
+        if (res.ok || res.status === 404) {
           success = true;
           break;
         }
-        lastErr = resp.message;
+        lastErr = res.message;
+        lastStatus = res.status;
       }
 
       // 2. Delete from Database if exists
