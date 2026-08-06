@@ -10,3 +10,5 @@ Disallow: /kitchen
 Disallow: /kitchen/
 Disallow: /setup
 Disallow: /auth
+
+Sitemap: https://voefood.com/sitemap.xml
