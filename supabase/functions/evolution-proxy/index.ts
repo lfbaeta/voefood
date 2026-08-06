@@ -341,15 +341,19 @@ function isConnectedState(body: any): boolean {
 }
 
 function safeInstanceName(name: string): string {
-  return name
+  // Evolution Go usually allows 3-64 chars. v2 usually 3-60.
+  // We normalize to meet both.
+  const normalized = name
     .trim()
-    .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/[^a-zA-Z0-9-]/g, "-") // Allow upper case just in case, though we lowercase next
+    .toLowerCase()
     .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60);
+    .replace(/^-|-$/g, "");
+  
+  if (normalized.length < 3) return `${normalized}-wa`.slice(0, 60);
+  return normalized.slice(0, 60);
 }
 
 serve(async (req) => {
