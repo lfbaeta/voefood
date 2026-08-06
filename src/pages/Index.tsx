@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSearchParams, useParams, Navigate } from 'react-router-dom';
 import { useSlug, useBasePath } from '@/hooks/useSlug';
 import { Helmet } from 'react-helmet-async';
+import { Users } from 'lucide-react';
 import { HeroHeader } from '@/components/menu/HeroHeader';
 import { StoreInfo } from '@/components/menu/StoreInfo';
 import { CategoryIcons } from '@/components/menu/CategoryIcons';
@@ -250,6 +251,13 @@ const Index = () => {
       </Helmet>
 
       <div className="min-h-screen bg-background pb-24 mx-auto max-w-[1200px]">
+        {/* Table Identifier Header */}
+        {searchParams.get('table') && (
+          <div className="bg-primary text-primary-foreground px-4 py-2 text-center font-bold sticky top-0 z-50 flex items-center justify-center gap-2">
+            <Users className="h-4 w-4" />
+            Mesa {searchParams.get('table')}
+          </div>
+        )}
         {/* Hero Header */}
         <HeroHeader store={store} />
 

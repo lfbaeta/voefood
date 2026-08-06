@@ -18,6 +18,9 @@ const statusConfig: Record<TableStatus, { label: string; color: string; bgColor:
   requesting_bill: { label: 'Pedindo Conta', color: 'text-destructive', bgColor: 'bg-destructive/20 border-destructive/50 animate-pulse' },
 };
 
+const pulseYellow = "animate-[pulse_1.5s_infinite] bg-yellow-400/30 border-yellow-500/50";
+const pulseRed = "animate-[pulse_1.5s_infinite] bg-red-500/30 border-red-600/50";
+
 // Get time-based color for occupied tables
 function getTimeColor(openedAt: string): { bg: string; text: string; label: string } {
   const minutes = differenceInMinutes(new Date(), new Date(openedAt));
@@ -53,7 +56,7 @@ export function TableCard({ table, onClick }: TableCardProps) {
     <Card 
       className={cn(
         "cursor-pointer transition-all hover:scale-105 hover:shadow-lg border-2 relative",
-        status.bgColor
+        order?.status === 'requesting_bill' ? pulseRed : (table.status === 'requesting_bill' ? pulseYellow : status.bgColor)
       )}
       onClick={onClick}
     >

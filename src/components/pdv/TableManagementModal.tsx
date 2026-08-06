@@ -23,6 +23,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useTablesWithOrders, useTableMutations } from '@/hooks/useTables';
 import { TableWithOrder, TableStatus } from '@/types/pdv';
+import { TableQRCodeModal } from './TableQRCodeModal';
+import { useSlug } from '@/hooks/useSlug';
+import { QrCode } from 'lucide-react';
 
 const statusConfig: Record<TableStatus, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   available: { label: 'Livre', variant: 'outline' },
@@ -42,7 +45,10 @@ export function TableManagementModal({ open, onOpenChange }: TableManagementModa
   const [newTableName, setNewTableName] = useState('');
   const [newTableCapacity, setNewTableCapacity] = useState('4');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrTable, setQrTable] = useState<{ number: number } | null>(null);
 
+  const slug = useSlug();
   const { tables } = useTablesWithOrders();
   const { createTable, updateTable, deleteTable } = useTableMutations();
 
@@ -61,11 +67,16 @@ export function TableManagementModal({ open, onOpenChange }: TableManagementModa
     const number = parseInt(newTableNumber);
     if (!number) return;
 
-    await createTable.mutateAsync({
+    const table = await createTable.mutateAsync({
       number,
       name: newTableName || undefined,
       capacity: parseInt(newTableCapacity) || 4,
     });
+
+    if (table) {
+      setQrTable({ number: table.number });
+      setQrModalOpen(true);
+    }
 
     setNewTableNumber('');
     setNewTableName('');
@@ -208,6 +219,17 @@ export function TableManagementModal({ open, onOpenChange }: TableManagementModa
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => {
+                            setQrTable({ number: table.number });
+                            setQrModalOpen(true);
+                          }}
+                          title="Ver QR Code"
+                        >
+                          <QrCode className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => startEditing(table)}
                           disabled={occupied}
                           title={occupied ? 'Mesa ocupada - não é possível editar' : 'Editar mesa'}
@@ -251,6 +273,15 @@ export function TableManagementModal({ open, onOpenChange }: TableManagementModa
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {qrTable && slug && (
+        <TableQRCodeModal
+          open={qrModalOpen}
+          onOpenChange={setQrModalOpen}
+          tableNumber={qrTable.number}
+          slug={slug}
+        />
+      )}
     </>
   );
 }
