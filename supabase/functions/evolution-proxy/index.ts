@@ -815,7 +815,9 @@ serve(async (req) => {
           return json({ ok: true, qr_code: postConnect.qr, connected: false, reused_server_qr: true });
         }
 
-        if (failedAttempts.length > 0 && failedAttempts.every((a) => a.status === 404)) {
+        // 404 = endpoint/instância inexistente; 401 = UUID/token órfão (instância sumiu do servidor).
+        // Nos dois casos a instância local está dessincronizada: recriamos no servidor.
+        if (failedAttempts.length > 0 && failedAttempts.every((a) => a.status === 404 || a.status === 401)) {
           const recreated = await recreateMissingInstance();
           if (recreated.ok) {
             const qr = recreated.qr;
@@ -825,10 +827,11 @@ serve(async (req) => {
           console.warn(`[connect_instance] recreate failed: ${recreated.error}`);
           return json({
             ok: false,
-            error: "O servidor Evolution respondeu 404 em todos os endpoints de QR. Confira se a URL cadastrada é a URL base da API Evolution, se a instância existe nesse servidor e depois clique em Sincronizar ou crie uma nova conexão.",
+            error: `Não foi possível recriar a instância no servidor Evolution: ${recreated.error ?? "erro desconhecido"}. Confira a URL base e a Global API Key em Revenda → WhatsApp (Evolution).`,
             attempts: failedAttempts,
           }, 400);
         }
+
 
         const last = failedAttempts[failedAttempts.length - 1];
         return json({
