@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useSearchParams, useParams, Navigate } from 'react-router-dom';
 import { useSlug, useBasePath } from '@/hooks/useSlug';
 import { Helmet } from 'react-helmet-async';
+import { Users } from 'lucide-react';
 import { HeroHeader } from '@/components/menu/HeroHeader';
 import { StoreInfo } from '@/components/menu/StoreInfo';
 import { CategoryIcons } from '@/components/menu/CategoryIcons';
