@@ -178,7 +178,7 @@ async function configureWebhook(
   ];
   const goEvents = ["Message", "SendMessage", "Connected", "Disconnected", "QR", "PairSuccess", "LoggedOut"];
 
-  const attempts: Array<{ label: string; path: string; init: RequestInit }> = [];
+  const attempts: Array<{ label: string; path: string; init: RequestInit; tokenOverride?: string }> = [];
 
   // Evolution API v2 (Node) — PUT /webhook/set/{instanceName}
   if (instanceName) {
@@ -208,7 +208,30 @@ async function configureWebhook(
     },
   });
 
-  // Legacy fallback — POST /instance/connect with webhookUrl
+  // Evolution Go usually allows setting webhook via /instance/connect or /instance/update as well
+  attempts.push({
+    label: "go-connect-webhook",
+    path: "/instance/connect",
+    init: {
+      method: "POST",
+      headers: { instanceId: instanceUuid },
+      body: JSON.stringify({ webhookUrl, subscribe: goEvents, immediate: false }),
+    },
+  });
+
+  // Global key attempt for Go
+  attempts.push({
+    label: "go-uuid-global",
+    path: "/webhook/set",
+    init: {
+      method: "POST",
+      headers: { instanceId: instanceUuid },
+      body: JSON.stringify({ url: webhookUrl, enabled: true, subscribe: goEvents }),
+    },
+    tokenOverride: cfg.apiKey
+  });
+
+  // Legacy fallback
   attempts.push({
     label: "legacy-connect",
     path: "/instance/connect",
