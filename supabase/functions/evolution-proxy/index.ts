@@ -638,7 +638,11 @@ serve(async (req) => {
         for (const a of attempts) {
           const info = await evoFetch(cfg, a.path, a.init, a.token);
           console.log(`[connect_instance] check=${a.label} status=${info.status} ok=${info.ok}`);
-          if (!info.ok) continue;
+          if (!info.ok) {
+            // Se o servidor retornar 404/401 mas a gente sabe que ele existe (ex: acabou de criar),
+            // pode ser apenas delay de propagação interna do Evolution Go.
+            continue;
+          }
           if (isConnectedState(info.body)) return { connected: true, qr: null };
           const qr = extractQr(info.body);
           if (qr) return { connected: false, qr };
@@ -709,8 +713,6 @@ serve(async (req) => {
 
         if (!qr) {
           const connectAgain = [
-            { label: "recreated-v2-connect-name", path: `/instance/connect/${encodeURIComponent(safeName)}`, init: { method: "GET" }, token: newToken },
-            { label: "recreated-v2-connect-name-global", path: `/instance/connect/${encodeURIComponent(safeName)}`, init: { method: "GET" }, token: cfg.apiKey },
             {
               label: "recreated-go-connect-global",
               path: "/instance/connect",
@@ -721,6 +723,8 @@ serve(async (req) => {
               },
               token: cfg.apiKey,
             },
+            { label: "recreated-v2-connect-name", path: `/instance/connect/${encodeURIComponent(safeName)}`, init: { method: "GET" }, token: newToken },
+            { label: "recreated-v2-connect-name-global", path: `/instance/connect/${encodeURIComponent(safeName)}`, init: { method: "GET" }, token: cfg.apiKey },
           ] as Array<{ label: string; path: string; init: RequestInit; token: string }>;
 
           for (const a of connectAgain) {
@@ -793,6 +797,26 @@ serve(async (req) => {
 
       const connectAttempts: Array<{ label: string; path: string; init: RequestInit; token: string }> = [
         {
+          label: "go-connect-uuid-global",
+          path: "/instance/connect",
+          init: {
+            method: "POST",
+            headers: { instanceId: uuid },
+            body: JSON.stringify({ webhookUrl, subscribe: ["ALL"], immediate: true }),
+          },
+          token: cfg.apiKey,
+        },
+        {
+          label: "go-connect-uuid-token",
+          path: "/instance/connect",
+          init: {
+            method: "POST",
+            headers: { instanceId: uuid },
+            body: JSON.stringify({ webhookUrl, subscribe: ["ALL"], immediate: true }),
+          },
+          token: instanceToken,
+        },
+        {
           label: "v2-connect-name",
           path: `/instance/connect/${encodeURIComponent(inst.instance_name)}`,
           init: { method: "GET" },
@@ -815,26 +839,6 @@ serve(async (req) => {
           path: `/instance/connect/${encodeURIComponent(uuid)}`,
           init: { method: "GET" },
           token: cfg.apiKey,
-        },
-        {
-          label: "go-connect-uuid-global",
-          path: "/instance/connect",
-          init: {
-            method: "POST",
-            headers: { instanceId: uuid },
-            body: JSON.stringify({ webhookUrl, subscribe: ["ALL"], immediate: true }),
-          },
-          token: cfg.apiKey,
-        },
-        {
-          label: "go-connect-uuid-token",
-          path: "/instance/connect",
-          init: {
-            method: "POST",
-            headers: { instanceId: uuid },
-            body: JSON.stringify({ webhookUrl, subscribe: ["ALL"], immediate: true }),
-          },
-          token: instanceToken,
         },
       ];
 
