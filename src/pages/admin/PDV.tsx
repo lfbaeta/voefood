@@ -9,6 +9,7 @@ import { TableCheckout } from '@/components/pdv/TableCheckout';
 import { TableManagementModal } from '@/components/pdv/TableManagementModal';
 import { OrderHistoryModal } from '@/components/pdv/OrderHistoryModal';
 import { QuickSaleModal } from '@/components/pdv/QuickSaleModal';
+import { QuickSaleOrderTypeModal, OrderType } from '@/components/pdv/QuickSaleOrderTypeModal';
 import { QuickSaleCheckout } from '@/components/pdv/QuickSaleCheckout';
 import { TableWithOrder, Table } from '@/types/pdv';
 import { useTablesWithOrders } from '@/hooks/useTables';
@@ -44,10 +45,12 @@ export default function PDV() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   
   // Quick Sale state
+  const [orderTypeModalOpen, setOrderTypeModalOpen] = useState(false);
   const [quickSaleModalOpen, setQuickSaleModalOpen] = useState(false);
   const [quickSaleCheckoutOpen, setQuickSaleCheckoutOpen] = useState(false);
   const [quickSaleItems, setQuickSaleItems] = useState<QuickSaleItem[]>([]);
   const [quickSaleCustomerName, setQuickSaleCustomerName] = useState('');
+  const [selectedOrderType, setSelectedOrderType] = useState<OrderType | null>(null);
 
   const { tables } = useTablesWithOrders();
 
@@ -134,7 +137,7 @@ export default function PDV() {
               <Button 
                 variant="default"
                 className="bg-green-600 hover:bg-green-700"
-                onClick={() => setQuickSaleModalOpen(true)}
+                onClick={() => setOrderTypeModalOpen(true)}
               >
                 <ShoppingBag className="h-4 w-4 mr-2" />
                 Venda Rápida
@@ -197,6 +200,16 @@ export default function PDV() {
       />
 
       {/* Quick Sale Modals */}
+      <QuickSaleOrderTypeModal
+        open={orderTypeModalOpen}
+        onOpenChange={setOrderTypeModalOpen}
+        onSelect={(type) => {
+          setSelectedOrderType(type);
+          setOrderTypeModalOpen(false);
+          setQuickSaleModalOpen(true);
+        }}
+      />
+
       <QuickSaleModal
         open={quickSaleModalOpen}
         onOpenChange={setQuickSaleModalOpen}
