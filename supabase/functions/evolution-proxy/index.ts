@@ -244,7 +244,7 @@ async function configureWebhook(
 
   let last: EvoFetchResult | null = null;
   for (const a of attempts) {
-    const res = await evoFetch(cfg, a.path, a.init, instanceToken);
+    const res = await evoFetch(cfg, a.path, a.init, a.tokenOverride || instanceToken);
     console.log(`[configureWebhook] attempt=${a.label} path=${a.path} status=${res.status} ok=${res.ok}`);
     if (res.ok) return { ok: true, status: res.status, response: res.body };
     last = res;
