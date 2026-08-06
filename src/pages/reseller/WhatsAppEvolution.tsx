@@ -143,23 +143,23 @@ function ManagerTab() {
 
   useEffect(() => { load(); }, []);
 
-  async function deleteInstance(name: string) {
-    if (!confirm(`Tem certeza que deseja apagar a instância "${name}"? Esta ação é irreversível.`)) return;
-    
-    setDeleting(name);
+  async function deleteInstance(inst: any) {
+    if (!confirm(`Tem certeza que deseja apagar a instância "${inst.name}"? Esta ação é irreversível.`)) return;
+
+    setDeleting(inst.name);
     const { data: restaurants } = await supabase.from('restaurants').select('id').limit(1);
     const rid = restaurants?.[0]?.id;
 
     const { data, error } = await supabase.functions.invoke('evolution-proxy', {
-      body: { action: 'delete_instance', restaurant_id: rid, instance_name: name },
+      body: { action: 'delete_server_instance', restaurant_id: rid, instance_name: inst.name, instance_uuid: inst.uuid },
     });
-    
+
     setDeleting(null);
     if (error || data?.error) {
       toast({ title: 'Erro ao apagar', description: data?.error || error?.message, variant: 'destructive' });
       return;
     }
-    
+
     toast({ title: 'Instância apagada com sucesso' });
     load();
   }
@@ -206,7 +206,7 @@ function ManagerTab() {
                       variant="ghost" 
                       size="icon" 
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => deleteInstance(inst.name)}
+                      onClick={() => deleteInstance(inst)}
                       disabled={deleting === inst.name}
                     >
                       {deleting === inst.name ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
