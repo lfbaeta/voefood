@@ -1080,9 +1080,10 @@ serve(async (req) => {
       }
 
       // 2. Delete from Database if exists
+      const isUuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
       for (const id of ids) {
         await supaAdmin.from("evolution_instances").delete().eq("instance_name", id);
-        await supaAdmin.from("evolution_instances").delete().eq("instance_uuid", id);
+        if (isUuid(id)) await supaAdmin.from("evolution_instances").delete().eq("instance_uuid", id);
       }
 
 

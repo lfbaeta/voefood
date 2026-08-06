@@ -143,23 +143,23 @@ function ManagerTab() {
 
   useEffect(() => { load(); }, []);
 
-  async function deleteInstance(name: string) {
-    if (!confirm(`Tem certeza que deseja apagar a instância "${name}"? Esta ação é irreversível.`)) return;
-    
-    setDeleting(name);
+  async function deleteInstance(inst: any) {
+    if (!confirm(`Tem certeza que deseja apagar a instância "${inst.name}"? Esta ação é irreversível.`)) return;
+
+    setDeleting(inst.name);
     const { data: restaurants } = await supabase.from('restaurants').select('id').limit(1);
     const rid = restaurants?.[0]?.id;
 
     const { data, error } = await supabase.functions.invoke('evolution-proxy', {
-      body: { action: 'delete_instance', restaurant_id: rid, instance_name: name },
+      body: { action: 'delete_server_instance', restaurant_id: rid, instance_name: inst.name, instance_uuid: inst.uuid },
     });
-    
+
     setDeleting(null);
     if (error || data?.error) {
       toast({ title: 'Erro ao apagar', description: data?.error || error?.message, variant: 'destructive' });
       return;
     }
-    
+
     toast({ title: 'Instância apagada com sucesso' });
     load();
   }
