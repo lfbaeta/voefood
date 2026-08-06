@@ -457,10 +457,15 @@ serve(async (req) => {
       const resellerId = await assertAccessTo(restaurant_id);
       const cfg = await getCfgForReseller(resellerId);
 
-      const safeName = safeInstanceName(instance_name);
-      if (!/^[a-z0-9-]{3,60}$/.test(safeName)) {
-        return json({ error: "Nome inválido. Use letras, números e hífens (3 a 60 caracteres)." }, 400);
+      let safeName = safeInstanceName(instance_name);
+      // Nomes muito curtos (ex.: "oi") são válidos para o usuário: completamos com sufixo.
+      if (safeName.length > 0 && safeName.length < 3) {
+        safeName = `${safeName}-wa`;
       }
+      if (!/^[a-z0-9-]{3,60}$/.test(safeName)) {
+        return json({ error: "Nome inválido. Use ao menos 1 letra ou número (ex.: vendas, loja-centro)." }, 400);
+      }
+
 
       const { count } = await supaAdmin
         .from("evolution_instances")
