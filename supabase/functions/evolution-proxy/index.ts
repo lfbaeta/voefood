@@ -38,14 +38,17 @@ function maskKey(k?: string | null): string {
 function normalizeQrString(value: any): string | null {
   if (typeof value !== "string") return null;
   const raw = value.trim();
-  if (raw.length <= 20) return null;
+  if (raw.length <= 10) return null; // Increased sensitivity
+
+  // Handle formats like "data:image/png;base64,..."
+  if (raw.startsWith("data:image")) return raw;
 
   const pipeIndex = raw.indexOf("|");
   if (pipeIndex >= 0) {
     const afterPipe = raw.slice(pipeIndex + 1).trim();
-    if (afterPipe.length > 20) return afterPipe;
+    if (afterPipe.length > 10) return afterPipe;
     const beforePipe = raw.slice(0, pipeIndex).trim();
-    if (beforePipe.length > 20) return beforePipe;
+    if (beforePipe.length > 10) return beforePipe;
   }
 
   return raw;
@@ -53,10 +56,15 @@ function normalizeQrString(value: any): string | null {
 
 function extractQr(obj: any): string | null {
   if (!obj) return null;
+  
+  // Direct string check
   const normalized = normalizeQrString(obj);
   if (normalized) return normalized;
+  
   if (typeof obj !== "object") return null;
 
+  // Evolution Go usually returns { qrcode: { code: "..." } } or { code: "..." }
+  // Evolution API v2 usually returns { qrcode: "..." } or { base64: "..." }
   const candidates = [
     obj.qrcode,
     obj.qr,
@@ -81,8 +89,18 @@ function extractQr(obj: any): string | null {
   ];
 
   for (const c of candidates) {
-    const found = extractQr(c);
-    if (found) return found;
+    if (c) {
+      // If candidate is a string, normalize it
+      if (typeof c === "string") {
+        const found = normalizeQrString(c);
+        if (found) return found;
+      }
+      // If candidate is an object, recurse once
+      if (typeof c === "object") {
+        const found = extractQr(c);
+        if (found) return found;
+      }
+    }
   }
   return null;
 }
@@ -160,7 +178,7 @@ async function configureWebhook(
   ];
   const goEvents = ["Message", "SendMessage", "Connected", "Disconnected", "QR", "PairSuccess", "LoggedOut"];
 
-  const attempts: Array<{ label: string; path: string; init: RequestInit }> = [];
+  const attempts: Array<{ label: string; path: string; init: RequestInit; tokenOverride?: string }> = [];
 
   // Evolution API v2 (Node) — PUT /webhook/set/{instanceName}
   if (instanceName) {
@@ -190,7 +208,30 @@ async function configureWebhook(
     },
   });
 
-  // Legacy fallback — POST /instance/connect with webhookUrl
+  // Evolution Go usually allows setting webhook via /instance/connect or /instance/update as well
+  attempts.push({
+    label: "go-connect-webhook",
+    path: "/instance/connect",
+    init: {
+      method: "POST",
+      headers: { instanceId: instanceUuid },
+      body: JSON.stringify({ webhookUrl, subscribe: goEvents, immediate: false }),
+    },
+  });
+
+  // Global key attempt for Go
+  attempts.push({
+    label: "go-uuid-global",
+    path: "/webhook/set",
+    init: {
+      method: "POST",
+      headers: { instanceId: instanceUuid },
+      body: JSON.stringify({ url: webhookUrl, enabled: true, subscribe: goEvents }),
+    },
+    tokenOverride: cfg.apiKey
+  });
+
+  // Legacy fallback
   attempts.push({
     label: "legacy-connect",
     path: "/instance/connect",
@@ -203,7 +244,7 @@ async function configureWebhook(
 
   let last: EvoFetchResult | null = null;
   for (const a of attempts) {
-    const res = await evoFetch(cfg, a.path, a.init, instanceToken);
+    const res = await evoFetch(cfg, a.path, a.init, a.tokenOverride || instanceToken);
     console.log(`[configureWebhook] attempt=${a.label} path=${a.path} status=${res.status} ok=${res.ok}`);
     if (res.ok) return { ok: true, status: res.status, response: res.body };
     last = res;
@@ -300,15 +341,19 @@ function isConnectedState(body: any): boolean {
 }
 
 function safeInstanceName(name: string): string {
-  return name
+  // Evolution Go usually allows 3-64 chars. v2 usually 3-60.
+  // We normalize to meet both.
+  const normalized = name
     .trim()
-    .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/[^a-zA-Z0-9-]/g, "-") // Allow upper case just in case, though we lowercase next
+    .toLowerCase()
     .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 60);
+    .replace(/^-|-$/g, "");
+  
+  if (normalized.length < 3) return `${normalized}-wa`.slice(0, 60);
+  return normalized.slice(0, 60);
 }
 
 serve(async (req) => {
@@ -488,14 +533,15 @@ serve(async (req) => {
       const webhookToken = crypto.randomUUID().replace(/-/g, "");
       const generatedToken = crypto.randomUUID();
       console.log(`[create_instance] -> POST /instance/create name=${safeName} token=${maskKey(generatedToken)}`);
-      // Evolution Go payload first, then Evolution API v2 (Node) payload as fallback
+      // Try Evolution Go payload first (name, token)
       let createRes = await evoFetch(cfg, "/instance/create", {
         method: "POST",
         body: JSON.stringify({ name: safeName, token: generatedToken }),
       });
-      console.log(`[create_instance] <- go status=${createRes.status} ok=${createRes.ok}`);
-
-      if (!createRes.ok) {
+      
+      // If Go style fails or doesn't return instance ID, try v2 style (instanceName, integration)
+      if (!createRes.ok || !(createRes.body?.data?.id || createRes.body?.instance?.id || createRes.body?.id)) {
+        console.log(`[create_instance] Go style failed or incomplete, trying v2 style...`);
         const v2Res = await evoFetch(cfg, "/instance/create", {
           method: "POST",
           body: JSON.stringify({
@@ -505,19 +551,19 @@ serve(async (req) => {
             qrcode: true,
           }),
         });
-        console.log(`[create_instance] <- v2 status=${v2Res.status} ok=${v2Res.ok}`);
         if (v2Res.ok) createRes = v2Res;
-        else if (v2Res.status === 401 || v2Res.status === 403 || createRes.status === 401 || createRes.status === 403) {
+      }
+      console.log(`[create_instance] <- go status=${createRes.status} ok=${createRes.ok}`);
+
+      if (!createRes.ok) {
+        if (createRes.status === 401 || createRes.status === 403) {
           return json({
             ok: false,
             error: "O servidor Evolution recusou a requisição (403 Forbidden). A Global API Key configurada é inválida ou não tem permissão para criar instâncias. Verifique a URL e a API Key em Revenda → WhatsApp (Evolution) e teste a conexão.",
-            response: v2Res.body ?? createRes.body,
+            response: createRes.body,
           }, 400);
         }
-        else {
-          return json({ ok: false, error: v2Res.message || createRes.message || `Falha ao criar instância (status ${v2Res.status})`, response: v2Res.body }, 400);
-        }
-
+        return json({ ok: false, error: createRes.message || `Falha ao criar instância (status ${createRes.status})`, response: createRes.body }, 400);
       }
 
       const body = createRes.body ?? {};

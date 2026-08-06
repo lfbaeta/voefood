@@ -19,14 +19,16 @@ function normalizeEvent(name: string | undefined): string {
 function normalizeQrString(value: any): string | null {
   if (typeof value !== "string") return null;
   const raw = value.trim();
-  if (raw.length <= 20) return null;
+  if (raw.length <= 10) return null;
+
+  if (raw.startsWith("data:image")) return raw;
 
   const pipeIndex = raw.indexOf("|");
   if (pipeIndex >= 0) {
     const afterPipe = raw.slice(pipeIndex + 1).trim();
-    if (afterPipe.length > 20) return afterPipe;
+    if (afterPipe.length > 10) return afterPipe;
     const beforePipe = raw.slice(0, pipeIndex).trim();
-    if (beforePipe.length > 20) return beforePipe;
+    if (beforePipe.length > 10) return beforePipe;
   }
 
   return raw;
@@ -58,8 +60,16 @@ function extractQr(obj: any): string | null {
     obj.data?.code,
   ];
   for (const c of candidates) {
-    const found = extractQr(c);
-    if (found) return found;
+    if (c) {
+      if (typeof c === "string") {
+        const found = normalizeQrString(c);
+        if (found) return found;
+      }
+      if (typeof c === "object") {
+        const found = extractQr(c);
+        if (found) return found;
+      }
+    }
   }
   return null;
 }
