@@ -899,8 +899,8 @@ serve(async (req) => {
 
       let qrString = extractQr(res.body);
       if (!qrString) {
-        for (let i = 0; i < 4; i++) {
-          await new Promise((r) => setTimeout(r, 1500));
+        for (let i = 0; i < 6; i++) {
+          await new Promise((r) => setTimeout(r, 2000));
           const current = await checkCurrentConnection();
           if (current.connected) {
             await supaAdmin
