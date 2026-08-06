@@ -38,14 +38,17 @@ function maskKey(k?: string | null): string {
 function normalizeQrString(value: any): string | null {
   if (typeof value !== "string") return null;
   const raw = value.trim();
-  if (raw.length <= 20) return null;
+  if (raw.length <= 10) return null; // Increased sensitivity
+
+  // Handle formats like "data:image/png;base64,..."
+  if (raw.startsWith("data:image")) return raw;
 
   const pipeIndex = raw.indexOf("|");
   if (pipeIndex >= 0) {
     const afterPipe = raw.slice(pipeIndex + 1).trim();
-    if (afterPipe.length > 20) return afterPipe;
+    if (afterPipe.length > 10) return afterPipe;
     const beforePipe = raw.slice(0, pipeIndex).trim();
-    if (beforePipe.length > 20) return beforePipe;
+    if (beforePipe.length > 10) return beforePipe;
   }
 
   return raw;
@@ -53,10 +56,15 @@ function normalizeQrString(value: any): string | null {
 
 function extractQr(obj: any): string | null {
   if (!obj) return null;
+  
+  // Direct string check
   const normalized = normalizeQrString(obj);
   if (normalized) return normalized;
+  
   if (typeof obj !== "object") return null;
 
+  // Evolution Go usually returns { qrcode: { code: "..." } } or { code: "..." }
+  // Evolution API v2 usually returns { qrcode: "..." } or { base64: "..." }
   const candidates = [
     obj.qrcode,
     obj.qr,
@@ -81,8 +89,18 @@ function extractQr(obj: any): string | null {
   ];
 
   for (const c of candidates) {
-    const found = extractQr(c);
-    if (found) return found;
+    if (c) {
+      // If candidate is a string, normalize it
+      if (typeof c === "string") {
+        const found = normalizeQrString(c);
+        if (found) return found;
+      }
+      // If candidate is an object, recurse once
+      if (typeof c === "object") {
+        const found = extractQr(c);
+        if (found) return found;
+      }
+    }
   }
   return null;
 }
