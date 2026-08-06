@@ -28,7 +28,7 @@ export default function Landing() {
     id: 'demo',
     name: 'CardápioDigital',
     company_name: 'CardápioDigital',
-    landing_page_title: 'Cardápio Digital Completo para seu Negócio',
+    landing_page_title: 'Cardápio Web e Cardápio Digital Completo para seu Negócio',
     landing_page_subtitle: 'Venda mais, pague menos taxas. Sistema completo de pedidos online para restaurantes, bares e lanchonetes.',
     landing_page_whatsapp: '5511999999999',
     landing_page_email: 'contato@cardapiodigital.com',
@@ -244,7 +244,7 @@ export default function Landing() {
 
       {/* Hero Section */}
       <HeroSection 
-        title={reseller.landing_page_title || 'Cardápio Digital Completo para seu Negócio'}
+        title={reseller.landing_page_title || 'Cardápio Web e Cardápio Digital Completo para seu Negócio'}
         subtitle={reseller.landing_page_subtitle || 'Venda mais, pague menos taxas. Sistema completo de pedidos online.'}
         primaryColor={primaryColor}
         whatsappLink={whatsappLink}
