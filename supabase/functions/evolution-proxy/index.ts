@@ -1056,7 +1056,9 @@ serve(async (req) => {
       const attempts = [
         { path: `/instance/delete/${encodeURIComponent(instanceName)}`, method: "DELETE" },
         { path: `/instance/logout/${encodeURIComponent(instanceName)}`, method: "DELETE" },
-        { path: "/instance/delete", method: "DELETE", headers: { instanceId: instanceName } }
+        { path: "/instance/delete", method: "DELETE", headers: { instanceId: instanceName } },
+        { path: `/instance/logout/${encodeURIComponent(instanceName)}`, method: "POST" },
+        { path: `/instance/delete/${encodeURIComponent(instanceName)}`, method: "POST" }
       ];
 
       let lastErr: string | undefined;
