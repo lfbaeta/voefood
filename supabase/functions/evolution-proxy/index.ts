@@ -533,11 +533,26 @@ serve(async (req) => {
       const webhookToken = crypto.randomUUID().replace(/-/g, "");
       const generatedToken = crypto.randomUUID();
       console.log(`[create_instance] -> POST /instance/create name=${safeName} token=${maskKey(generatedToken)}`);
-      // Evolution Go payload first, then Evolution API v2 (Node) payload as fallback
+      // Try Evolution Go payload first (name, token)
       let createRes = await evoFetch(cfg, "/instance/create", {
         method: "POST",
         body: JSON.stringify({ name: safeName, token: generatedToken }),
       });
+      
+      // If Go style fails or doesn't return instance ID, try v2 style (instanceName, integration)
+      if (!createRes.ok || !(createRes.body?.data?.id || createRes.body?.instance?.id || createRes.body?.id)) {
+        console.log(`[create_instance] Go style failed or incomplete, trying v2 style...`);
+        const v2Res = await evoFetch(cfg, "/instance/create", {
+          method: "POST",
+          body: JSON.stringify({
+            instanceName: safeName,
+            token: generatedToken,
+            integration: "WHATSAPP-BAILEYS",
+            qrcode: true,
+          }),
+        });
+        if (v2Res.ok) createRes = v2Res;
+      }
       console.log(`[create_instance] <- go status=${createRes.status} ok=${createRes.ok}`);
 
       if (!createRes.ok) {
