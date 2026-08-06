@@ -48,13 +48,14 @@ function extractQr(obj: any): string | null {
     obj.base64,
     obj.Base64,
     obj.qr_code,
-    obj?.qrcode?.base64,
-    obj?.qrcode?.code,
-    obj?.QRCode?.Base64,
-    obj?.QRCode?.Code,
-    obj?.data?.qrcode,
-    obj?.data?.base64,
-    obj?.data?.code,
+    obj.value,
+    obj.qrcode?.base64,
+    obj.qrcode?.code,
+    obj.QRCode?.Base64,
+    obj.QRCode?.Code,
+    obj.data?.qrcode,
+    obj.data?.base64,
+    obj.data?.code,
   ];
   for (const c of candidates) {
     const found = extractQr(c);
