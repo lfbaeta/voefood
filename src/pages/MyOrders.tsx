@@ -122,7 +122,7 @@ export default function MyOrders() {
       <header className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
           <Link to={basePath || '/'}>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" aria-label="Voltar ao cardápio">
               <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
@@ -148,6 +148,7 @@ export default function MyOrders() {
                 className="flex-1"
               />
               <Button 
+                aria-label="Buscar pedidos pelo telefone"
                 onClick={searchOrders} 
                 disabled={phone.replace(/\D/g, '').length < 10 || isLoading || isLoadingRestaurant || !restaurantId}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"

@@ -77,6 +77,7 @@ const Cart = () => {
           <Button 
             variant="ghost" 
             size="icon" 
+            aria-label="Voltar ao cardápio"
             onClick={() => navigate(basePath || '/')}
             className="text-primary-foreground hover:bg-primary-foreground/10"
           >

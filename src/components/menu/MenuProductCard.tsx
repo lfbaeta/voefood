@@ -95,6 +95,7 @@ export function MenuProductCard({ product, onSelect }: MenuProductCardProps) {
         {/* Add Button - Positioned over image */}
         {product.is_available && (
           <button
+            aria-label={`Adicionar ${product.name} ao carrinho`}
             onClick={(e) => {
               e.stopPropagation();
               onSelect(product);
