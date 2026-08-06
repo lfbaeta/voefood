@@ -206,7 +206,7 @@ function ManagerTab() {
                       variant="ghost" 
                       size="icon" 
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => deleteInstance(inst.name)}
+                      onClick={() => deleteInstance(inst)}
                       disabled={deleting === inst.name}
                     >
                       {deleting === inst.name ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
