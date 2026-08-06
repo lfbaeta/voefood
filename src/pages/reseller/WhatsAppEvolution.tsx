@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Eye, EyeOff, Server, Smartphone, Monitor, CheckCircle2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Server, Smartphone, Monitor, CheckCircle2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EvolutionInstancesTab } from '@/components/reseller/EvolutionInstancesTab';
@@ -117,9 +117,72 @@ function ServerTab() {
 }
 
 function ManagerTab() {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [instances, setInstances] = useState<any[]>([]);
+
+  async function load() {
+    setLoading(true);
+    // Passing a dummy restaurant_id if we don't have one, as assertAccessTo needs it
+    // But since we are in reseller context, we can pick any restaurant belonging to this reseller
+    // Or just trust the proxy handles it if we pass one.
+    const { data: restaurants } = await supabase.from('restaurants').select('id').limit(1);
+    const rid = restaurants?.[0]?.id;
+
+    const { data, error } = await supabase.functions.invoke('evolution-proxy', {
+      body: { action: 'fetch_server_instances', restaurant_id: rid },
+    });
+    setLoading(false);
+    if (error || data?.error) {
+      toast({ title: 'Erro', description: data?.error || error?.message, variant: 'destructive' });
+      return;
+    }
+    setInstances(data?.instances || []);
+  }
+
+  useEffect(() => { load(); }, []);
+
   return (
-    <div className="text-sm text-muted-foreground py-6 text-center">
-      Acesso direto ao Manager do Evolution Go será disponibilizado em breve.
+    <div className="space-y-4 pt-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium">Instâncias Diretas no Servidor</h3>
+        <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Sincronizar
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-12"><Loader2 className="animate-spin h-6 w-6 text-primary" /></div>
+      ) : instances.length === 0 ? (
+        <div className="text-sm text-muted-foreground py-10 text-center border rounded-lg border-dashed">
+          Nenhuma instância encontrada no servidor Evolution.
+        </div>
+      ) : (
+        <div className="border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="text-left p-3 font-medium">Nome</th>
+                <th className="text-left p-3 font-medium">Número</th>
+                <th className="text-left p-3 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {instances.map((inst, i) => (
+                <tr key={i} className="hover:bg-muted/30">
+                  <td className="p-3 font-mono text-xs">{inst.name}</td>
+                  <td className="p-3">{inst.phone ? `+${inst.phone}` : '-'}</td>
+                  <td className="p-3">
+                    <Badge variant="outline" className={inst.connected ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-muted text-muted-foreground"}>
+                      {inst.connected ? "Conectado" : "Desconectado"}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

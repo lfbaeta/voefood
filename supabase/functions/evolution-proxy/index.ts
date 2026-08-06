@@ -976,6 +976,16 @@ serve(async (req) => {
       return json({ ok: true, synced: parsed.length, updated });
     }
 
+    if (action === "fetch_server_instances") {
+      const resellerId = await assertAccessTo(restaurant_id!); // restaurant_id can be dummy if platform admin
+      const cfg = await getCfgForReseller(resellerId);
+      const resp = await evoFetch(cfg, "/instance/all", { method: "GET" });
+      if (!resp.ok) return json({ error: resp.message || "Falha ao buscar instâncias", response: resp.body }, 400);
+
+      const parsed = extractInstanceList(resp.body).map(parseInstanceFromList).filter((p) => p.name);
+      return json({ instances: parsed });
+    }
+
     if (action === "reconfigure_webhook") {
       if (!instance_id) return json({ error: "instance_id required" }, 400);
       const { data: inst } = await supaAdmin
