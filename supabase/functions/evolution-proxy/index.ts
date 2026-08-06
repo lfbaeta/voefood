@@ -1045,12 +1045,13 @@ serve(async (req) => {
       return json({ instances: parsed });
     }
 
-    if (action === "delete_instance") {
+    if (action === "delete_server_instance") {
       const resellerId = await assertAccessTo(restaurant_id!);
       const cfg = await getCfgForReseller(resellerId);
-      
-      const instanceName = instance_name || instance_id;
-      if (!instanceName) return json({ error: "instance_name or instance_id required" }, 400);
+
+      const uuid = (payload as any).instance_uuid as string | undefined;
+      const instanceName = instance_name || uuid;
+      if (!instanceName) return json({ error: "instance_name required" }, 400);
 
       // 1. Delete from Evolution Server
       const attempts = [
