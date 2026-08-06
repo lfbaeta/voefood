@@ -9,6 +9,37 @@ export function CartButton() {
   const navigate = useNavigate();
   const slug = useSlug();
   const basePath = useBasePath(slug);
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  const { data: store } = useStoreConfig();
+  const tableNumber = searchParams.get('table');
+
+  const handleTableAction = async (action: 'table_call' | 'request_bill') => {
+    if (!tableNumber || !store) return;
+    
+    try {
+      const { error } = await supabase.functions.invoke('notify-event', {
+        body: { 
+          event: action, 
+          restaurant_id: store.restaurant_id,
+          table_number: tableNumber 
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: action === 'table_call' ? 'Garçom chamado!' : 'Conta solicitada!',
+        description: 'Um atendente virá até você em breve.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Erro ao processar pedido',
+        description: 'Tente novamente em instantes.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   if (totalItems === 0) return null;
 
