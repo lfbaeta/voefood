@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Eye, EyeOff, Server, Smartphone, Monitor, CheckCircle2, RefreshCw } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Server, Smartphone, Monitor, CheckCircle2, RefreshCw, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EvolutionInstancesTab } from '@/components/reseller/EvolutionInstancesTab';
@@ -119,6 +119,7 @@ function ServerTab() {
 function ManagerTab() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [instances, setInstances] = useState<any[]>([]);
 
   async function load() {
@@ -142,6 +143,28 @@ function ManagerTab() {
 
   useEffect(() => { load(); }, []);
 
+  async function deleteInstance(name: string) {
+    if (!confirm(`Tem certeza que deseja apagar a instância "${name}"? Esta ação é irreversível.`)) return;
+    
+    setDeleting(name);
+    const { data: restaurants } = await supabase.from('restaurants').select('id').limit(1);
+    const rid = restaurants?.[0]?.id;
+
+    const { data, error } = await supabase.functions.invoke('evolution-proxy', {
+      body: { action: 'delete_instance', restaurant_id: rid, instance_name: name },
+    });
+    
+    setDeleting(null);
+    if (error || data?.error) {
+      toast({ title: 'Erro ao apagar', description: data?.error || error?.message, variant: 'destructive' });
+      return;
+    }
+    
+    toast({ title: 'Instância apagada com sucesso' });
+    load();
+  }
+
+
   return (
     <div className="space-y-4 pt-4">
       <div className="flex items-center justify-between">
@@ -164,7 +187,8 @@ function ManagerTab() {
               <tr>
                 <th className="text-left p-3 font-medium">Nome</th>
                 <th className="text-left p-3 font-medium">Número</th>
-                <th className="text-left p-3 font-medium">Status</th>
+                 <th className="text-left p-3 font-medium">Status</th>
+                <th className="text-right p-3 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -176,6 +200,17 @@ function ManagerTab() {
                     <Badge variant="outline" className={inst.connected ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-muted text-muted-foreground"}>
                       {inst.connected ? "Conectado" : "Desconectado"}
                     </Badge>
+                  </td>
+                  <td className="p-3 text-right">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => deleteInstance(inst.name)}
+                      disabled={deleting === inst.name}
+                    >
+                      {deleting === inst.name ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    </Button>
                   </td>
                 </tr>
               ))}

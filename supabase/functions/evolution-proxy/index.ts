@@ -1045,6 +1045,41 @@ serve(async (req) => {
       return json({ instances: parsed });
     }
 
+    if (action === "delete_instance") {
+      const resellerId = await assertAccessTo(restaurant_id!);
+      const cfg = await getCfgForReseller(resellerId);
+      
+      const instanceName = instance_name || instance_id;
+      if (!instanceName) return json({ error: "instance_name or instance_id required" }, 400);
+
+      // 1. Delete from Evolution Server
+      const attempts = [
+        { path: `/instance/delete/${encodeURIComponent(instanceName)}`, method: "DELETE" },
+        { path: `/instance/logout/${encodeURIComponent(instanceName)}`, method: "DELETE" },
+        { path: "/instance/delete", method: "DELETE", headers: { instanceId: instanceName } }
+      ];
+
+      let lastErr: string | undefined;
+      let success = false;
+      for (const a of attempts) {
+        const resp = await evoFetch(cfg, a.path, { method: a.method, headers: (a as any).headers });
+        if (resp.ok || resp.status === 404) {
+          success = true;
+          break;
+        }
+        lastErr = resp.message;
+      }
+
+      // 2. Delete from Database if exists
+      await supaAdmin
+        .from("evolution_instances")
+        .delete()
+        .or(`instance_name.eq."${instanceName}",instance_uuid.eq."${instanceName}"`);
+
+      if (!success) return json({ error: lastErr || "Falha ao apagar no servidor Evolution" }, 400);
+      return json({ ok: true });
+    }
+
     if (action === "reconfigure_webhook") {
       if (!instance_id) return json({ error: "instance_id required" }, 400);
       const { data: inst } = await supaAdmin
