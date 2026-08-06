@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Eye, EyeOff, Server, Smartphone, Monitor, CheckCircle2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Server, Smartphone, Monitor, CheckCircle2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EvolutionInstancesTab } from '@/components/reseller/EvolutionInstancesTab';
