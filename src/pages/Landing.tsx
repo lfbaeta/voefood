@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { useLandingPageData } from '@/hooks/useLandingPage';
 import { Button } from '@/components/ui/button';
 import { 
@@ -27,7 +28,7 @@ export default function Landing() {
     id: 'demo',
     name: 'CardápioDigital',
     company_name: 'CardápioDigital',
-    landing_page_title: 'Cardápio Digital Completo para seu Negócio',
+    landing_page_title: 'Cardápio Web e Cardápio Digital Completo para seu Negócio',
     landing_page_subtitle: 'Venda mais, pague menos taxas. Sistema completo de pedidos online para restaurantes, bares e lanchonetes.',
     landing_page_whatsapp: '5511999999999',
     landing_page_email: 'contato@cardapiodigital.com',
@@ -152,8 +153,42 @@ export default function Landing() {
     setCheckoutOpen(true);
   };
 
+  const pageTitle = `${reseller.company_name || reseller.name} — Cardápio Web e Cardápio Digital`;
+  const pageDescription = `Cardápio web e cardápio digital completo para restaurantes, bares e lanchonetes: pedidos online por QR Code, PDV, delivery e gestão. ${reseller.landing_page_subtitle || 'Venda mais, pague menos taxas.'}`.slice(0, 158);
+
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <link rel="canonical" href={`${window.location.origin}${window.location.pathname}`} />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:url" content={`${window.location.origin}${window.location.pathname}`} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            '@context': 'https://schema.org',
+            '@graph': [
+              {
+                '@type': 'Organization',
+                name: reseller.company_name || reseller.name,
+                url: window.location.origin,
+                ...(reseller.landing_page_logo ? { logo: reseller.landing_page_logo } : {}),
+              },
+              {
+                '@type': 'WebSite',
+                name: pageTitle,
+                url: window.location.origin,
+              },
+            ],
+          })}
+        </script>
+      </Helmet>
+
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -209,7 +244,7 @@ export default function Landing() {
 
       {/* Hero Section */}
       <HeroSection 
-        title={reseller.landing_page_title || 'Cardápio Digital Completo para seu Negócio'}
+        title={reseller.landing_page_title || 'Cardápio Web e Cardápio Digital Completo para seu Negócio'}
         subtitle={reseller.landing_page_subtitle || 'Venda mais, pague menos taxas. Sistema completo de pedidos online.'}
         primaryColor={primaryColor}
         whatsappLink={whatsappLink}

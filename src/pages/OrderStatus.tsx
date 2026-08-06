@@ -132,6 +132,7 @@ const OrderStatus = () => {
           <Button 
             variant="ghost" 
             size="icon" 
+            aria-label="Voltar"
             onClick={() => {
               if (window.history.length > 1) {
                 navigate(-1);
@@ -152,6 +153,7 @@ const OrderStatus = () => {
           <Button 
             variant="ghost" 
             size="icon"
+            aria-label="Atualizar status do pedido"
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="text-primary-foreground hover:bg-primary-foreground/10"

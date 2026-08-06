@@ -77,6 +77,7 @@ const Cart = () => {
           <Button 
             variant="ghost" 
             size="icon" 
+            aria-label="Voltar ao cardápio"
             onClick={() => navigate(basePath || '/')}
             className="text-primary-foreground hover:bg-primary-foreground/10"
           >
@@ -175,6 +176,7 @@ const Cart = () => {
                     <Button
                       variant="ghost"
                       size="icon-sm"
+                      aria-label="Diminuir quantidade"
                       onClick={() => updateQuantity(item.lineId, Math.max(1, item.quantity - 1))}
                       className="h-8 w-8 rounded-full bg-muted hover:bg-muted/80"
                       disabled={item.quantity <= 1}
@@ -187,6 +189,7 @@ const Cart = () => {
                     <Button
                       variant="ghost"
                       size="icon-sm"
+                      aria-label="Aumentar quantidade"
                       onClick={() => updateQuantity(item.lineId, item.quantity + 1)}
                       className="h-8 w-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
                     >
