@@ -1053,38 +1053,38 @@ serve(async (req) => {
       const instanceName = instance_name || uuid;
       if (!instanceName) return json({ error: "instance_name required" }, 400);
 
-      // 1. Delete from Evolution Server
-      const attempts = [
-        { path: `/instance/delete/${encodeURIComponent(instanceName)}`, method: "DELETE" },
-        { path: `/instance/logout/${encodeURIComponent(instanceName)}`, method: "DELETE" },
-        { path: "/instance/delete", method: "DELETE", headers: { instanceId: instanceName } },
-        { path: `/instance/logout/${encodeURIComponent(instanceName)}`, method: "POST" },
-        { path: `/instance/delete/${encodeURIComponent(instanceName)}`, method: "POST" }
-      ];
+      // 1. Delete from Evolution Server (try name and uuid, v2 + Go patterns)
+      const ids = [...new Set([instanceName, uuid].filter(Boolean) as string[])];
+      const attempts: Array<{ path: string; method: string; headers?: Record<string, string> }> = [];
+      for (const id of ids) {
+        const e = encodeURIComponent(id);
+        attempts.push(
+          { path: `/instance/delete/${e}`, method: "DELETE" },
+          { path: "/instance/delete", method: "DELETE", headers: { instanceId: id } },
+          { path: `/instance/logout/${e}`, method: "DELETE" },
+          { path: `/instance/${e}`, method: "DELETE" },
+          { path: `/instance/delete/${e}`, method: "POST" },
+        );
+      }
 
       let lastErr: string | undefined;
-      let lastStatus: number | undefined;
       let success = false;
-      
-      console.log(`[delete_instance] Attempting to delete "${instanceName}" from server at ${cfg.url}`);
+
+      console.log(`[delete_server_instance] deleting "${instanceName}" (uuid=${uuid ?? "?"}) at ${cfg.url}`);
 
       for (const a of attempts) {
-        const res = await evoFetch(cfg, a.path, { method: a.method, headers: (a as any).headers });
-        console.log(`[delete_instance] attempt=${a.path} status=${res.status} ok=${res.ok}`);
-        
-        if (res.ok || res.status === 404) {
-          success = true;
-          break;
-        }
+        const res = await evoFetch(cfg, a.path, { method: a.method, headers: a.headers });
+        console.log(`[delete_server_instance] ${a.method} ${a.path} -> ${res.status}`);
+        if (res.ok) { success = true; break; }
         lastErr = res.message;
-        lastStatus = res.status;
       }
 
       // 2. Delete from Database if exists
-      await supaAdmin
-        .from("evolution_instances")
-        .delete()
-        .or(`instance_name.eq."${instanceName}",instance_uuid.eq."${instanceName}"`);
+      for (const id of ids) {
+        await supaAdmin.from("evolution_instances").delete().eq("instance_name", id);
+        await supaAdmin.from("evolution_instances").delete().eq("instance_uuid", id);
+      }
+
 
       if (!success) return json({ error: lastErr || "Falha ao apagar no servidor Evolution" }, 400);
       return json({ ok: true });
