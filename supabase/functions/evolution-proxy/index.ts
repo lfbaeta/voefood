@@ -646,7 +646,7 @@ serve(async (req) => {
         .single();
       if (insertErr) throw insertErr;
 
-      const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inserted.webhook_token}`;
+      const webhookUrl = `https://hmpfoxxlaebxzakdmopj.supabase.co/functions/v1/evolution-webhook?token=${inserted.webhook_token}`;
       const wh = await configureWebhook(cfg, uuid, instanceToken, webhookUrl, safeName);
       if (!wh.ok) console.warn(`[create_instance] webhook setup failed: ${wh.error}`);
 
@@ -676,7 +676,7 @@ serve(async (req) => {
         return json({ error: "Instância sem UUID ou token. Recrie ou sincronize a instância." }, 400);
       }
 
-      const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
+      const webhookUrl = `https://hmpfoxxlaebxzakdmopj.supabase.co/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
 
       async function checkConnectionFor(instanceName: string, instanceUuid: string, token: string): Promise<{ connected: boolean; qr: string | null }> {
         const attempts = buildQrFetchAttempts(instanceName, instanceUuid, token, cfg);
@@ -738,7 +738,7 @@ serve(async (req) => {
           return { ok: false, qr: null, error: "Servidor recriou a instância mas não retornou UUID.", response: createRes.body };
         }
 
-        const newWebhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
+        const newWebhookUrl = `https://hmpfoxxlaebxzakdmopj.supabase.co/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
         const wh = await configureWebhook(cfg, newUuid, newToken, newWebhookUrl, safeName);
         if (!wh.ok) console.warn(`[connect_instance] webhook setup after recreate failed: ${wh.error}`);
 
@@ -1060,7 +1060,7 @@ serve(async (req) => {
       for (const inst of dbList ?? []) {
         const match = parsed.find((p) => p.name === inst.instance_name || p.uuid === inst.instance_uuid);
         if (!match) continue;
-        const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
+        const webhookUrl = `https://hmpfoxxlaebxzakdmopj.supabase.co/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
         if (match.uuid && (match.token || inst.instance_token)) {
           await configureWebhook(cfg, match.uuid, match.token || inst.instance_token, webhookUrl, inst.instance_name);
         }
@@ -1152,7 +1152,7 @@ serve(async (req) => {
         return json({ ok: false, error: "Instância sem UUID/token. Faça 'Sincronizar' primeiro." }, 400);
       }
 
-      const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
+      const webhookUrl = `https://hmpfoxxlaebxzakdmopj.supabase.co/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
       const wh = await configureWebhook(cfg, inst.instance_uuid, inst.instance_token, webhookUrl, inst.instance_name);
       if (!wh.ok) {
         return json({ ok: false, error: wh.error || "Falha ao registrar webhook", response: wh.response }, 400);
