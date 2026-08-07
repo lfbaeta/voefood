@@ -108,12 +108,20 @@ const Auth = () => {
           return;
         }
 
-        // Reseller dono do restaurante: libera o painel deste restaurante.
+        // Admin do restaurante atual: libera sempre (acesso direto).
+        if (adminData && adminRestaurantSlug === slug) {
+          setIsLoading(false);
+          navigate(`${basePath}/admin`);
+          return;
+        }
+
+        // Reseller dono do restaurante: checa se exige senha (magic login).
         if (resellerData && targetRestaurant?.id) {
           const { data: isResOfThis } = await supabase.rpc('is_reseller_of_restaurant', {
             _user_id: userId,
             _restaurant_id: targetRestaurant.id,
           });
+          
           if (isResOfThis === true) {
             const requiresPassword = (targetRestaurant as any)?.auth_password_required ?? true;
             
@@ -132,6 +140,7 @@ const Auth = () => {
               return;
             }
           }
+
           // Reseller de outra rede: manda de volta para o painel do revendedor.
           setIsLoading(false);
           await supabase.auth.signOut();
@@ -140,13 +149,6 @@ const Auth = () => {
             description: 'Use peddi.online/auth para acessar seu painel de revendedor.',
           });
           window.location.href = `${window.location.protocol}//${getCurrentRootDomain()}/auth`;
-          return;
-        }
-
-        // Admin do restaurante atual: libera.
-        if (adminData && adminRestaurantSlug === slug) {
-          setIsLoading(false);
-          navigate(`${basePath}/admin`);
           return;
         }
 
