@@ -43,6 +43,7 @@ interface QuickSaleCheckoutProps {
   customerName: string;
   onSuccess: () => void;
   onBack: () => void;
+  selectedOrderType: string | null;
 }
 
 const paymentMethods = [
@@ -59,6 +60,7 @@ export function QuickSaleCheckout({
   customerName,
   onSuccess,
   onBack,
+  selectedOrderType,
 }: QuickSaleCheckoutProps) {
   const [paymentMethod, setPaymentMethod] = useState('money');
   const [changeFor, setChangeFor] = useState('');
@@ -101,7 +103,7 @@ export function QuickSaleCheckout({
       const order = await openTable.mutateAsync({
         tableId: null, // No table for quick sale
         customerCount: 1,
-        waiterName: customerName || 'Balcão',
+        waiterName: customerName || (selectedOrderType === 'delivery' ? 'Delivery' : selectedOrderType === 'pickup' ? 'Retirada' : 'Balcão'),
       });
 
       const orderId = order.id;
