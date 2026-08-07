@@ -1060,7 +1060,7 @@ serve(async (req) => {
       if (!restaurant_id) return json({ error: "restaurant_id required" }, 400);
       const resellerId = await assertAccessTo(restaurant_id);
       const cfg = await getCfgForReseller(resellerId);
-      const resp = await evoFetch(cfg, "/instance/all", { method: "GET" });
+      const resp = await listServerInstances(cfg);
       if (!resp.ok) return json({ error: resp.message || "Falha ao sincronizar", response: resp.body }, 400);
 
       const parsed = extractInstanceList(resp.body).map(parseInstanceFromList).filter((p) => p.name);
@@ -1097,7 +1097,7 @@ serve(async (req) => {
     if (action === "fetch_server_instances") {
       const resellerId = await assertAccessTo(restaurant_id!); // restaurant_id can be dummy if platform admin
       const cfg = await getCfgForReseller(resellerId);
-      const resp = await evoFetch(cfg, "/instance/all", { method: "GET" });
+      const resp = await listServerInstances(cfg);
       if (!resp.ok) return json({ error: resp.message || "Falha ao buscar instâncias", response: resp.body }, 400);
 
       const parsed = extractInstanceList(resp.body).map(parseInstanceFromList).filter((p) => p.name);
