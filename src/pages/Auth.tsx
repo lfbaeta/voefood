@@ -96,47 +96,51 @@ const Auth = () => {
           .eq('slug', slug)
           .maybeSingle();
 
-        // Super admin global (app_role = 'admin'): acesso a qualquer restaurante.
+        // 1. Super admin global (app_role = 'admin'): acesso total e irrestrito.
         const { data: isSuper } = await supabase.rpc('has_role', {
           _user_id: userId,
           _role: 'admin',
         });
+        
         if (isSuper === true) {
+          console.log('Acesso concedido: Super Administrador Master.');
           setIsLoading(false);
           navigate(`${basePath}/admin`);
           return;
         }
 
-        // Reseller dono do restaurante: libera o painel deste restaurante.
+        // 2. Reseller dono do restaurante: libera o painel deste restaurante.
         if (resellerData && targetRestaurant?.id) {
           const { data: isResOfThis } = await supabase.rpc('is_reseller_of_restaurant', {
             _user_id: userId,
             _restaurant_id: targetRestaurant.id,
           });
           if (isResOfThis === true) {
+            console.log('Acesso concedido: Revendedor responsável.');
             setIsLoading(false);
             navigate(`${basePath}/admin`);
             return;
           }
-          // Reseller de outra rede: manda de volta para o painel do revendedor.
+          // Reseller tentando acessar restaurante de outro reseller: bloqueia.
           setIsLoading(false);
           await supabase.auth.signOut();
           toast({
-            title: 'Restaurante fora da sua rede',
-            description: 'Use peddi.online/auth para acessar seu painel de revendedor.',
+            title: 'Acesso negado',
+            description: 'Este estabelecimento pertence a outro revendedor.',
+            variant: 'destructive',
           });
           window.location.href = `${window.location.protocol}//${getCurrentRootDomain()}/auth`;
           return;
         }
 
-        // Admin do restaurante atual: libera.
+        // 3. Admin do restaurante atual: libera.
         if (adminData && adminRestaurantSlug === slug) {
           setIsLoading(false);
           navigate(`${basePath}/admin`);
           return;
         }
 
-        // Admin de outro restaurante: redireciona para o subdomínio correto.
+        // 4. Admin de outro restaurante: redireciona para o subdomínio correto.
         if (adminData && adminRestaurantSlug && adminRestaurantSlug !== slug) {
           setIsLoading(false);
           await supabase.auth.signOut();
@@ -148,7 +152,7 @@ const Auth = () => {
           return;
         }
 
-        // Nenhum papel válido para este restaurante.
+        // Caso nenhum papel seja validado.
         setIsLoading(false);
         await supabase.auth.signOut();
         toast({
@@ -251,9 +255,12 @@ const Auth = () => {
         setIsLoading(false);
       }
 
-      // Se já houver uma sessão válida (mesmo sem direct=true), tenta redirecionar
+      // 4. Verificação de sessão existente (SSO interno)
+      // Se o usuário já está logado no navegador e entra em uma URL de restaurante,
+      // validamos as permissões master antes de mostrar a tela de login.
       const { data: { session: existingSession } } = await supabase.auth.getSession();
       if (existingSession?.user) {
+        console.log('Sessão ativa detectada. Processando login automático via permissão master...');
         await checkRolesAndRedirect(existingSession.user.id);
         return;
       }
