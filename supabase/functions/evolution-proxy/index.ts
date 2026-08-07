@@ -1152,7 +1152,7 @@ serve(async (req) => {
         return json({ ok: false, error: "Instância sem UUID/token. Faça 'Sincronizar' primeiro." }, 400);
       }
 
-      const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
+      const webhookUrl = `https://hmpfoxxlaebxzakdmopj.supabase.co/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
       const wh = await configureWebhook(cfg, inst.instance_uuid, inst.instance_token, webhookUrl, inst.instance_name);
       if (!wh.ok) {
         return json({ ok: false, error: wh.error || "Falha ao registrar webhook", response: wh.response }, 400);
