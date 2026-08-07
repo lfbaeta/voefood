@@ -13,6 +13,7 @@ export function SecuritySettings() {
   const { toast } = useToast();
   
   const [kitchenPinEnabled, setKitchenPinEnabled] = useState(false);
+  const [authPasswordRequired, setAuthPasswordRequired] = useState(true);
   const [kitchenPin, setKitchenPin] = useState('');
   const [showKitchenPin, setShowKitchenPin] = useState(false);
 
