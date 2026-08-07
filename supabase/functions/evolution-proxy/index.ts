@@ -646,7 +646,7 @@ serve(async (req) => {
         .single();
       if (insertErr) throw insertErr;
 
-      const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inserted.webhook_token}`;
+      const webhookUrl = `https://hmpfoxxlaebxzakdmopj.supabase.co/functions/v1/evolution-webhook?token=${inserted.webhook_token}`;
       const wh = await configureWebhook(cfg, uuid, instanceToken, webhookUrl, safeName);
       if (!wh.ok) console.warn(`[create_instance] webhook setup failed: ${wh.error}`);
 
