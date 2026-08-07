@@ -201,75 +201,73 @@ const Auth = () => {
   // Check if already logged in
   useEffect(() => {
     const checkAuth = async () => {
-      // Se vier com o parâmetro "direct=true", faz login automático como o admin do restaurante
+      // 1. Pega a sessão atual do Supabase
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      // 2. Lógica de bypass por parâmetro ou sessão ativa
       const params = new URLSearchParams(location.search);
-      if (params.get('direct') === 'true' && slug) {
-        setIsLoading(true);
-        try {
-          // 1. Pega a sessão atual do administrador (revendedor ou super admin)
-          const { data: { session } } = await supabase.auth.getSession();
-          
-          if (session?.user) {
-            console.log('Verificando acesso direto para:', session.user.email);
-            
-            // 2. Verifica se é Super Admin
-            const { data: isSuper } = await supabase.rpc('has_role', {
-              _user_id: session.user.id,
-              _role: 'admin',
+      const isDirect = params.get('direct') === 'true';
+
+      if (currentSession?.user) {
+        console.log('Sessão ativa detectada. Verificando permissões master...');
+        
+        // Se estivermos em um contexto de restaurante (slug presente)
+        if (slug) {
+          // Verifica se é Super Admin
+          const { data: isSuper } = await supabase.rpc('has_role', {
+            _user_id: currentSession.user.id,
+            _role: 'admin',
+          });
+
+          if (isSuper === true) {
+            console.log('Acesso concedido: Super Administrador Master via Bypass.');
+            setIsLoading(false);
+            navigate(`${basePath}/admin`);
+            return;
+          }
+
+          // Busca o restaurante alvo para verificar se o usuário é o revendedor dele
+          const { data: targetRestaurant } = await supabase
+            .from('restaurants')
+            .select('id')
+            .eq('slug', slug)
+            .maybeSingle();
+
+          if (targetRestaurant?.id) {
+            const { data: isResOfThis } = await supabase.rpc('is_reseller_of_restaurant', {
+              _user_id: currentSession.user.id,
+              _restaurant_id: targetRestaurant.id,
             });
 
-            if (isSuper === true) {
-              console.log('Super Admin detectado, permitindo acesso direto.');
-              await checkRolesAndRedirect(session.user.id);
+            if (isResOfThis === true) {
+              console.log('Acesso concedido: Revendedor responsável via Bypass.');
+              setIsLoading(false);
+              navigate(`${basePath}/admin`);
               return;
             }
-
-            // 3. Busca o restaurante alvo para verificar se o usuário é o revendedor dele
-            const { data: targetRestaurant } = await supabase
-              .from('restaurants')
-              .select('id')
-              .eq('slug', slug)
-              .maybeSingle();
-
-            if (targetRestaurant?.id) {
-              const { data: isResOfThis } = await supabase.rpc('is_reseller_of_restaurant', {
-                _user_id: session.user.id,
-                _restaurant_id: targetRestaurant.id,
-              });
-
-              if (isResOfThis === true) {
-                console.log('Revendedor do restaurante detectado, permitindo acesso direto.');
-                await checkRolesAndRedirect(session.user.id);
-                return;
-              }
-            }
-            
-            // Se chegou aqui, o usuário está logado mas não tem permissão para esta loja específica
-            console.warn('Usuário logado tentou acesso direto sem permissão para este slug.');
-          } else {
-            console.log('Nenhuma sessão encontrada para acesso direto.');
           }
-        } catch (err) {
-          console.error('Erro no fluxo de acesso direto:', err);
         }
-        setIsLoading(false);
-      }
 
-      // 4. Verificação de sessão existente (SSO interno)
-      // Se o usuário já está logado no navegador e entra em uma URL de restaurante,
-      // validamos as permissões master antes de mostrar a tela de login.
-      const { data: { session: existingSession } } = await supabase.auth.getSession();
-      if (existingSession?.user) {
-        console.log('Sessão ativa detectada. Processando login automático via permissão master...');
-        await checkRolesAndRedirect(existingSession.user.id);
+        // Se não for super admin/reseller daquela loja específica, segue o fluxo normal de redirecionamento de roles
+        // mas não exibe a tela de login se a sessão for válida para o contexto atual.
+        await checkRolesAndRedirect(currentSession.user.id);
         return;
       }
+
+      // 3. Se não houver sessão e NÃO for um bypass, aguarda setup ou segue pro formulário
+      if (loadingSetupStatus) return;
+      if (hasReseller === false) {
+        navigate('/setup');
+        return;
+      }
+      
+      setIsLoading(false);
     };
+
     checkAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && event === 'SIGNED_IN') {
-        // Use setTimeout to defer Supabase calls and prevent deadlock
         setTimeout(() => {
           checkRolesAndRedirect(session.user.id);
         }, 0);
@@ -277,7 +275,7 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, slug, hasReseller, loadingSetupStatus, location.search]);
+  }, [navigate, slug, hasReseller, loadingSetupStatus, location.search, basePath]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -285,6 +283,7 @@ const Auth = () => {
 
     try {
       const emailValidation = z.string().email().safeParse(formData.email);
+
       if (!emailValidation.success) {
         toast({
           title: 'Email inválido',
