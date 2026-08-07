@@ -676,7 +676,7 @@ serve(async (req) => {
         return json({ error: "Instância sem UUID ou token. Recrie ou sincronize a instância." }, 400);
       }
 
-      const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
+      const webhookUrl = `https://hmpfoxxlaebxzakdmopj.supabase.co/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
 
       async function checkConnectionFor(instanceName: string, instanceUuid: string, token: string): Promise<{ connected: boolean; qr: string | null }> {
         const attempts = buildQrFetchAttempts(instanceName, instanceUuid, token, cfg);
