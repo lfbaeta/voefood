@@ -738,7 +738,7 @@ serve(async (req) => {
           return { ok: false, qr: null, error: "Servidor recriou a instância mas não retornou UUID.", response: createRes.body };
         }
 
-        const newWebhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
+        const newWebhookUrl = `https://hmpfoxxlaebxzakdmopj.supabase.co/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
         const wh = await configureWebhook(cfg, newUuid, newToken, newWebhookUrl, safeName);
         if (!wh.ok) console.warn(`[connect_instance] webhook setup after recreate failed: ${wh.error}`);
 
