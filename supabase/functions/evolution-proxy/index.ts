@@ -1060,7 +1060,7 @@ serve(async (req) => {
       for (const inst of dbList ?? []) {
         const match = parsed.find((p) => p.name === inst.instance_name || p.uuid === inst.instance_uuid);
         if (!match) continue;
-        const webhookUrl = `${supabaseUrl}/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
+        const webhookUrl = `https://hmpfoxxlaebxzakdmopj.supabase.co/functions/v1/evolution-webhook?token=${inst.webhook_token}`;
         if (match.uuid && (match.token || inst.instance_token)) {
           await configureWebhook(cfg, match.uuid, match.token || inst.instance_token, webhookUrl, inst.instance_name);
         }
