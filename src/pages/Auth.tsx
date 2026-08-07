@@ -218,16 +218,8 @@ const Auth = () => {
             // Se o usuário logado é o admin desse restaurante, ou é um Super Admin (checado no checkRolesAndRedirect)
             // ou se o usuário logado for um revendedor com acesso a esse restaurante, prosseguimos.
             if (session?.user) {
-              // Verifica se o usuário logado é o admin desse restaurante, Super Admin ou Revendedor
-              const { data: isAuthz } = await supabase.rpc('is_authorized_for_restaurant', {
-                _user_id: session.user.id,
-                _restaurant_id: adminData.restaurant_id
-              });
-
-              if (isAuthz) {
-                await checkRolesAndRedirect(session.user.id);
-                return;
-              }
+              await checkRolesAndRedirect(session.user.id);
+              return;
             }
           }
         } catch (err) {
