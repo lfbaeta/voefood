@@ -533,25 +533,65 @@ serve(async (req) => {
       const webhookToken = crypto.randomUUID().replace(/-/g, "");
       const generatedToken = crypto.randomUUID();
       console.log(`[create_instance] -> POST /instance/create name=${safeName} token=${maskKey(generatedToken)}`);
-      // Try Evolution Go payload first (name, token)
-      let createRes = await evoFetch(cfg, "/instance/create", {
-        method: "POST",
-        body: JSON.stringify({ name: safeName, token: generatedToken }),
-      });
       
-      // If Go style fails or doesn't return instance ID, try v2 style (instanceName, integration)
-      if (!createRes.ok || !(createRes.body?.data?.id || createRes.body?.instance?.id || createRes.body?.id)) {
-        console.log(`[create_instance] Go style failed or incomplete, trying v2 style...`);
-        const v2Res = await evoFetch(cfg, "/instance/create", {
-          method: "POST",
-          body: JSON.stringify({
+      // Attempt to create instance using various common patterns
+      const createAttempts: Array<{ label: string; payload: any; token: string }> = [
+        { 
+          label: "go-standard", 
+          payload: { name: safeName, token: generatedToken }, 
+          token: cfg.apiKey 
+        },
+        { 
+          label: "v2-node", 
+          payload: { 
+            instanceName: safeName, 
+            token: generatedToken, 
+            integration: "WHATSAPP-BAILEYS", 
+            qrcode: true 
+          }, 
+          token: cfg.apiKey 
+        },
+        {
+          label: "go-v2-hybrid",
+          payload: {
             instanceName: safeName,
             token: generatedToken,
             integration: "WHATSAPP-BAILEYS",
             qrcode: true,
-          }),
-        });
-        if (v2Res.ok) createRes = v2Res;
+            name: safeName
+          },
+          token: cfg.apiKey
+        }
+      ];
+
+      let createRes: EvoFetchResult | null = null;
+      for (const attempt of createAttempts) {
+        const res = await evoFetch(cfg, "/instance/create", {
+          method: "POST",
+          body: JSON.stringify(attempt.payload),
+        }, attempt.token);
+        
+        console.log(`[create_instance] attempt=${attempt.label} status=${res.status} ok=${res.ok}`);
+        
+        // Check if creation was successful (Evolution Go can return 200/201 even if structure is different)
+        if (res.ok && (res.body?.data?.id || res.body?.instance?.id || res.body?.id || res.body?.success === true)) {
+          createRes = res;
+          break;
+        }
+        
+        // If it's 403, we should stop and report the error (Global API Key issue)
+        if (res.status === 403 || res.status === 401) {
+          createRes = res;
+          break;
+        }
+      }
+
+      if (!createRes) {
+        // Fallback to the last response if none was successful
+        createRes = await evoFetch(cfg, "/instance/create", {
+          method: "POST",
+          body: JSON.stringify({ name: safeName, token: generatedToken }),
+        }, cfg.apiKey);
       }
       console.log(`[create_instance] <- go status=${createRes.status} ok=${createRes.ok}`);
 
