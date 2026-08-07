@@ -202,22 +202,25 @@ const Auth = () => {
       if (params.get('direct') === 'true' && slug) {
         setIsLoading(true);
         try {
+          // 1. Pega a sessão atual do administrador (revendedor ou super admin)
           const { data: { session } } = await supabase.auth.getSession();
           
           if (session?.user) {
-            // Verifica se o usuário logado é o Super Admin (app_role = 'admin')
+            console.log('Verificando acesso direto para:', session.user.email);
+            
+            // 2. Verifica se é Super Admin
             const { data: isSuper } = await supabase.rpc('has_role', {
               _user_id: session.user.id,
               _role: 'admin',
             });
 
             if (isSuper === true) {
-              console.log('Super Admin detected for direct access');
+              console.log('Super Admin detectado, permitindo acesso direto.');
               await checkRolesAndRedirect(session.user.id);
               return;
             }
 
-            // Busca o restaurante alvo para verificar se o usuário é o revendedor dele
+            // 3. Busca o restaurante alvo para verificar se o usuário é o revendedor dele
             const { data: targetRestaurant } = await supabase
               .from('restaurants')
               .select('id')
@@ -231,32 +234,28 @@ const Auth = () => {
               });
 
               if (isResOfThis === true) {
-                console.log('Reseller detected for direct access');
+                console.log('Revendedor do restaurante detectado, permitindo acesso direto.');
                 await checkRolesAndRedirect(session.user.id);
                 return;
               }
             }
+            
+            // Se chegou aqui, o usuário está logado mas não tem permissão para esta loja específica
+            console.warn('Usuário logado tentou acesso direto sem permissão para este slug.');
+          } else {
+            console.log('Nenhuma sessão encontrada para acesso direto.');
           }
         } catch (err) {
-          console.error('Direct access error:', err);
+          console.error('Erro no fluxo de acesso direto:', err);
         }
         setIsLoading(false);
       }
 
-      // Aguarda a verificação do setup-status para evitar redirect errado.
-      if (loadingSetupStatus) return;
-
-      // If no resellers exist, redirect to setup immediately
-      if (hasReseller === false) {
-        navigate('/setup');
+      // Se já houver uma sessão válida (mesmo sem direct=true), tenta redirecionar
+      const { data: { session: existingSession } } = await supabase.auth.getSession();
+      if (existingSession?.user) {
+        await checkRolesAndRedirect(existingSession.user.id);
         return;
-      }
-
-      // Se tem slug na URL, significa que o restaurante existe, vai direto pro login
-      // Não precisa verificar se existe revendedor
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await checkRolesAndRedirect(session.user.id);
       }
     };
     checkAuth();
