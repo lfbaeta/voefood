@@ -217,7 +217,7 @@ function SubscriptionsContent() {
                       <TableCell>
                         <button 
                           className="font-medium hover:underline"
-                          onClick={() => navigate(`/reseller/restaurants/${payment.restaurant_id}`)}
+                          onClick={() => window.open(`${buildRestaurantUrl(payment.restaurants?.slug || '')}/auth?direct=true`, '_blank')}
                         >
                           {payment.restaurants?.name || 'Estabelecimento'}
                         </button>

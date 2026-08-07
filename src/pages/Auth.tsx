@@ -216,7 +216,7 @@ const Auth = () => {
             const { data: { session } } = await supabase.auth.getSession();
             
             // Se o usuário logado é o admin desse restaurante, ou é um Super Admin (checado no checkRolesAndRedirect)
-            // prosseguimos para o redirecionamento.
+            // ou se o usuário logado for um revendedor com acesso a esse restaurante, prosseguimos.
             if (session?.user) {
               await checkRolesAndRedirect(session.user.id);
               return;
