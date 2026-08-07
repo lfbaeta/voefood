@@ -205,7 +205,7 @@ const Auth = () => {
           // Busca o admin vinculado a este restaurante (pegando o primeiro admin ativo)
           const { data: adminData } = await supabase
             .from('restaurant_admins')
-            .select('user_id, restaurant_id')
+            .select('user_id')
             .eq('restaurants.slug', slug)
             .limit(1)
             .maybeSingle();
