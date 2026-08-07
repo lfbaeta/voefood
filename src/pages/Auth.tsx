@@ -202,24 +202,39 @@ const Auth = () => {
       if (params.get('direct') === 'true' && slug) {
         setIsLoading(true);
         try {
-          // Busca o admin vinculado a este restaurante (pegando o primeiro admin ativo)
-          const { data: adminData } = await supabase
-            .from('restaurant_admins')
-            .select('user_id')
-            .eq('restaurants.slug', slug)
-            .limit(1)
-            .maybeSingle();
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session?.user) {
+            // Verifica se o usuário logado é o Super Admin (app_role = 'admin')
+            const { data: isSuper } = await supabase.rpc('has_role', {
+              _user_id: session.user.id,
+              _role: 'admin',
+            });
 
-          if (adminData?.user_id) {
-            // Em Lovable Cloud, o admin (revendedor ou dono) geralmente já está logado
-            // no domínio principal. Se ele já tem uma sessão, verificamos se é o admin esperado.
-            const { data: { session } } = await supabase.auth.getSession();
-            
-            // Se o usuário logado é o admin desse restaurante, ou é um Super Admin (checado no checkRolesAndRedirect)
-            // ou se o usuário logado for um revendedor com acesso a esse restaurante, prosseguimos.
-            if (session?.user) {
+            if (isSuper === true) {
+              console.log('Super Admin detected for direct access');
               await checkRolesAndRedirect(session.user.id);
               return;
+            }
+
+            // Busca o restaurante alvo para verificar se o usuário é o revendedor dele
+            const { data: targetRestaurant } = await supabase
+              .from('restaurants')
+              .select('id')
+              .eq('slug', slug)
+              .maybeSingle();
+
+            if (targetRestaurant?.id) {
+              const { data: isResOfThis } = await supabase.rpc('is_reseller_of_restaurant', {
+                _user_id: session.user.id,
+                _restaurant_id: targetRestaurant.id,
+              });
+
+              if (isResOfThis === true) {
+                console.log('Reseller detected for direct access');
+                await checkRolesAndRedirect(session.user.id);
+                return;
+              }
             }
           }
         } catch (err) {
