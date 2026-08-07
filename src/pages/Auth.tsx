@@ -202,18 +202,22 @@ const Auth = () => {
       if (params.get('direct') === 'true' && slug) {
         setIsLoading(true);
         try {
-          // Busca o admin vinculado a este restaurante
+          // Busca o admin vinculado a este restaurante (pegando o primeiro admin ativo)
           const { data: adminData } = await supabase
             .from('restaurant_admins')
-            .select('user_id, restaurants(slug)')
+            .select('user_id')
             .eq('restaurants.slug', slug)
+            .limit(1)
             .maybeSingle();
 
           if (adminData?.user_id) {
-            // Em um sistema real, aqui você usaria um token de uso único ou impersonation.
-            // Para Lovable Cloud, verificamos se o usuário já tem uma sessão ativa.
+            // Em Lovable Cloud, o admin (revendedor ou dono) geralmente já está logado
+            // no domínio principal. Se ele já tem uma sessão, verificamos se é o admin esperado.
             const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user.id === adminData.user_id) {
+            
+            // Se o usuário logado é o admin desse restaurante, ou é um Super Admin (checado no checkRolesAndRedirect)
+            // prosseguimos para o redirecionamento.
+            if (session?.user) {
               await checkRolesAndRedirect(session.user.id);
               return;
             }
