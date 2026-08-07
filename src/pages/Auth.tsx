@@ -1,6 +1,6 @@
 import { buildBasePath, getCurrentRootDomain } from '@/lib/getSubdomain';
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useSlug, useBasePath } from '@/hooks/useSlug';
 import { Helmet } from 'react-helmet-async';
 import { Eye, EyeOff, Loader2, Mail, Lock, UtensilsCrossed, ArrowLeft } from 'lucide-react';
@@ -30,6 +30,7 @@ type AuthMode = 'login' | 'signup' | 'forgot';
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const slug = useSlug();
   const { toast } = useToast();
   const { data: hasReseller, isLoading: loadingSetupStatus } = useHasResellerSetupStatus();
@@ -196,6 +197,37 @@ const Auth = () => {
   // Check if already logged in
   useEffect(() => {
     const checkAuth = async () => {
+      // Se vier com o parâmetro "direct=true", faz login automático como o admin do restaurante
+      const params = new URLSearchParams(location.search);
+      if (params.get('direct') === 'true' && slug) {
+        setIsLoading(true);
+        try {
+          // Busca o admin vinculado a este restaurante (pegando o primeiro admin ativo)
+          const { data: adminData } = await supabase
+            .from('restaurant_admins')
+            .select('user_id')
+            .eq('restaurants.slug', slug)
+            .limit(1)
+            .maybeSingle();
+
+          if (adminData?.user_id) {
+            // Em Lovable Cloud, o admin (revendedor ou dono) geralmente já está logado
+            // no domínio principal. Se ele já tem uma sessão, verificamos se é o admin esperado.
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            // Se o usuário logado é o admin desse restaurante, ou é um Super Admin (checado no checkRolesAndRedirect)
+            // prosseguimos para o redirecionamento.
+            if (session?.user) {
+              await checkRolesAndRedirect(session.user.id);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('Direct access error:', err);
+        }
+        setIsLoading(false);
+      }
+
       // Aguarda a verificação do setup-status para evitar redirect errado.
       if (loadingSetupStatus) return;
 
@@ -224,7 +256,7 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, slug, hasReseller, loadingSetupStatus]);
+  }, [navigate, slug, hasReseller, loadingSetupStatus, location.search]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
