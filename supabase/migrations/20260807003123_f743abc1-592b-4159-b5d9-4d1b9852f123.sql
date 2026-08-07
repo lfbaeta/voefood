@@ -1,1 +1,0 @@
-ALTER TABLE public.store_config ADD COLUMN IF NOT EXISTS auth_password_required boolean NOT NULL DEFAULT true;

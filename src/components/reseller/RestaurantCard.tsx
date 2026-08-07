@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { Restaurant } from '@/types/reseller';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Store, Calendar, CreditCard, ExternalLink, Settings, MoreVertical, Loader2 } from 'lucide-react';
+import { Store, Calendar, CreditCard, ExternalLink, Settings, MoreVertical } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -13,8 +12,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useStoreOpenStatus } from '@/hooks/useStoreOpenStatus';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
@@ -33,39 +30,6 @@ const statusConfig = {
 export function RestaurantCard({ restaurant, onView, onEdit, onManage }: RestaurantCardProps) {
   const status = statusConfig[restaurant.subscription_status];
   const { isOpen, isLoading: isLoadingStatus } = useStoreOpenStatus(restaurant.id);
-  const { user } = useAuth();
-  const [isAccessing, setIsAccessing] = useState(false);
-
-  const handleManage = async () => {
-    if (!user) return;
-    setIsAccessing(true);
-    try {
-      // 1. Check if the restaurant requires password for reseller access
-      const { data: config } = await supabase
-        .from('store_config')
-        .select('auth_password_required')
-        .eq('restaurant_id', restaurant.id)
-        .maybeSingle();
-      
-      const requiresPassword = config?.auth_password_required ?? true;
-      const targetUrl = `${window.location.protocol}//${restaurant.slug}.${window.location.host}/admin`;
-
-      if (requiresPassword) {
-        // Just redirect to auth
-        window.open(`${window.location.protocol}//${restaurant.slug}.${window.location.host}/auth`, '_blank');
-      } else {
-        // MAGIC LOGIN: Get a session transfer token or just redirect to admin if permissions allow 
-        // For simplicity and since RLS allows reseller, we can try to redirect to admin directly
-        // The App will check roles and allow access because the reseller session is valid globally (Supabase cookies)
-        window.open(targetUrl, '_blank');
-      }
-    } catch (err) {
-      console.error('Error accessing restaurant:', err);
-      onManage(restaurant.id);
-    } finally {
-      setIsAccessing(false);
-    }
-  };
   
   const trialDaysRemaining = restaurant.subscription_status === 'trial' && restaurant.subscription_start_date
     ? Math.max(0, restaurant.trial_days - Math.floor(
@@ -109,9 +73,9 @@ export function RestaurantCard({ restaurant, onView, onEdit, onManage }: Restaur
                 <Settings className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleManage} disabled={isAccessing}>
+              <DropdownMenuItem onClick={() => onManage(restaurant.id)}>
                 <Store className="h-4 w-4 mr-2" />
-                {isAccessing ? 'Acessando...' : 'Acessar painel'}
+                Acessar painel
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -160,10 +124,9 @@ export function RestaurantCard({ restaurant, onView, onEdit, onManage }: Restaur
           <Button 
             size="sm" 
             className="flex-1"
-            onClick={handleManage}
-            disabled={isAccessing}
+            onClick={() => onManage(restaurant.id)}
           >
-            {isAccessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Acessar'}
+            Acessar
           </Button>
         </div>
       </CardContent>

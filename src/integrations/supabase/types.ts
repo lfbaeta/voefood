@@ -3773,7 +3773,6 @@ export type Database = {
         Row: {
           accent_color: string | null
           address: string | null
-          auth_password_required: boolean
           auto_print_delivery: boolean
           auto_print_enabled: boolean
           auto_print_quick_sale: boolean
@@ -3834,7 +3833,6 @@ export type Database = {
         Insert: {
           accent_color?: string | null
           address?: string | null
-          auth_password_required?: boolean
           auto_print_delivery?: boolean
           auto_print_enabled?: boolean
           auto_print_quick_sale?: boolean
@@ -3895,7 +3893,6 @@ export type Database = {
         Update: {
           accent_color?: string | null
           address?: string | null
-          auth_password_required?: boolean
           auto_print_delivery?: boolean
           auto_print_enabled?: boolean
           auto_print_quick_sale?: boolean

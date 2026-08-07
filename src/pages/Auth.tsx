@@ -11,7 +11,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTheme } from '@/hooks/useTheme';
 import { z } from 'zod';
 import { useHasResellerSetupStatus } from '@/hooks/useHasResellerSetupStatus';
-import { useStoreConfig } from '@/hooks/useStore';
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: 'Email inválido' }),
@@ -34,7 +33,6 @@ const Auth = () => {
   const slug = useSlug();
   const { toast } = useToast();
   const { data: hasReseller, isLoading: loadingSetupStatus } = useHasResellerSetupStatus();
-  const { data: store, isLoading: loadingStore } = useStoreConfig();
   const [mode, setMode] = useState<AuthMode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -91,11 +89,11 @@ const Auth = () => {
       // ============ Contexto: SUBDOMÍNIO de restaurante ============
       if (slug) {
         // Descobre o restaurante alvo pelo slug para checar autorização de super admin/reseller.
-        const targetRestaurant = store;
-        
-        // Se o restaurante não exige senha no acesso via revendedor (magic login), podemos pular? 
-        // Na verdade, o magic login acontece no componente de acesso. 
-        // Se chegamos aqui, é porque o usuário clicou no link ou a sessão expirou.
+        const { data: targetRestaurant } = await supabase
+          .from('restaurants')
+          .select('id')
+          .eq('slug', slug)
+          .maybeSingle();
 
         // Super admin global (app_role = 'admin'): acesso a qualquer restaurante.
         const { data: isSuper } = await supabase.rpc('has_role', {
@@ -108,39 +106,17 @@ const Auth = () => {
           return;
         }
 
-        // Admin do restaurante atual: libera sempre (acesso direto).
-        if (adminData && adminRestaurantSlug === slug) {
-          setIsLoading(false);
-          navigate(`${basePath}/admin`);
-          return;
-        }
-
-        // Reseller dono do restaurante: checa se exige senha (magic login).
+        // Reseller dono do restaurante: libera o painel deste restaurante.
         if (resellerData && targetRestaurant?.id) {
           const { data: isResOfThis } = await supabase.rpc('is_reseller_of_restaurant', {
             _user_id: userId,
             _restaurant_id: targetRestaurant.id,
           });
-          
           if (isResOfThis === true) {
-            const requiresPassword = (targetRestaurant as any)?.auth_password_required ?? true;
-            
-            if (!requiresPassword) {
-              setIsLoading(false);
-              navigate(`${basePath}/admin`);
-              return;
-            } else {
-              // Se exige senha, desloga o revendedor para permitir login do admin do restaurante
-              await supabase.auth.signOut();
-              setIsLoading(false);
-              toast({
-                title: 'Login obrigatório',
-                description: 'Este estabelecimento exige login e senha de administrador.',
-              });
-              return;
-            }
+            setIsLoading(false);
+            navigate(`${basePath}/admin`);
+            return;
           }
-
           // Reseller de outra rede: manda de volta para o painel do revendedor.
           setIsLoading(false);
           await supabase.auth.signOut();
@@ -149,6 +125,13 @@ const Auth = () => {
             description: 'Use peddi.online/auth para acessar seu painel de revendedor.',
           });
           window.location.href = `${window.location.protocol}//${getCurrentRootDomain()}/auth`;
+          return;
+        }
+
+        // Admin do restaurante atual: libera.
+        if (adminData && adminRestaurantSlug === slug) {
+          setIsLoading(false);
+          navigate(`${basePath}/admin`);
           return;
         }
 
