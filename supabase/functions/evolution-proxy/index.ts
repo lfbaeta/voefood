@@ -301,18 +301,24 @@ function buildQrFetchAttempts(instanceName: string, uuid: string, instanceToken:
   const encodedName = encodeURIComponent(instanceName);
   const encodedUuid = encodeURIComponent(uuid);
   return [
+    // Evolution Go - specific QR endpoint
+    { label: "go-qr-uuid-global", path: "/instance/qr", init: { method: "GET", headers: { instanceId: uuid } }, token: cfg.apiKey },
+    { label: "go-qr-uuid-token", path: "/instance/qr", init: { method: "GET", headers: { instanceId: uuid } }, token: instanceToken },
+    
     // Evolution API v2 (Node)
     { label: "v2-state-name", path: `/instance/connectionState/${encodedName}`, init: { method: "GET" }, token: instanceToken },
     { label: "v2-state-name-global", path: `/instance/connectionState/${encodedName}`, init: { method: "GET" }, token: cfg.apiKey },
     { label: "v2-state-uuid", path: `/instance/connectionState/${encodedUuid}`, init: { method: "GET" }, token: instanceToken },
-    { label: "v2-fetch-name", path: `/instance/fetchInstances?instanceName=${encodedName}`, init: { method: "GET" }, token: instanceToken },
-    { label: "v2-fetch-name-global", path: `/instance/fetchInstances?instanceName=${encodedName}`, init: { method: "GET" }, token: cfg.apiKey },
-    // Evolution Go exposes QR through a dedicated endpoint and sends QR events by webhook.
-    { label: "go-qr-uuid-global", path: "/instance/qr", init: { method: "GET", headers: { instanceId: uuid } }, token: cfg.apiKey },
-    { label: "go-qr-uuid-token", path: "/instance/qr", init: { method: "GET", headers: { instanceId: uuid } }, token: instanceToken },
+    
+    // Info endpoints
     { label: "go-info-uuid-global", path: `/instance/${encodedUuid}`, init: { method: "GET" }, token: cfg.apiKey },
     { label: "go-info-uuid-token", path: `/instance/${encodedUuid}`, init: { method: "GET" }, token: instanceToken },
-    // Older/self-hosted variants seen in Evolution Go forks.
+    
+    // Fetchers
+    { label: "v2-fetch-name", path: `/instance/fetchInstances?instanceName=${encodedName}`, init: { method: "GET" }, token: instanceToken },
+    { label: "v2-fetch-name-global", path: `/instance/fetchInstances?instanceName=${encodedName}`, init: { method: "GET" }, token: cfg.apiKey },
+    
+    // Fallbacks
     { label: "go-qrcode-name-global", path: `/instance/${encodedName}/qrcode`, init: { method: "GET" }, token: cfg.apiKey },
     { label: "go-qrcode-uuid-global", path: `/instance/${encodedUuid}/qrcode`, init: { method: "GET" }, token: cfg.apiKey },
     { label: "go-status-name-global", path: `/instance/${encodedName}/status`, init: { method: "GET" }, token: cfg.apiKey },
