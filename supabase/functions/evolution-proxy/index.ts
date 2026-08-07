@@ -283,6 +283,19 @@ function extractInstanceList(body: any): any[] {
   return [];
 }
 
+// Evolution Go usa /instance/all; Evolution API v2 usa /instance/fetchInstances
+async function listServerInstances(cfg: EvoCfg) {
+  const paths = ["/instance/all", "/instance/fetchInstances", "/instance/list"];
+  let last: any = null;
+  for (const p of paths) {
+    const resp = await evoFetch(cfg, p, { method: "GET" });
+    last = resp;
+    if (resp.ok) return resp;
+    if (resp.status !== 404) return resp;
+  }
+  return last;
+}
+
 function getConnectionState(body: any): string | null {
   return body?.connectionStatus
     ?? body?.connection
