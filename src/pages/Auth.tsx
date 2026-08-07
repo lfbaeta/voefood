@@ -1,6 +1,6 @@
 import { buildBasePath, getCurrentRootDomain } from '@/lib/getSubdomain';
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useSlug, useBasePath } from '@/hooks/useSlug';
 import { Helmet } from 'react-helmet-async';
 import { Eye, EyeOff, Loader2, Mail, Lock, UtensilsCrossed, ArrowLeft } from 'lucide-react';
@@ -30,6 +30,7 @@ type AuthMode = 'login' | 'signup' | 'forgot';
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const slug = useSlug();
   const { toast } = useToast();
   const { data: hasReseller, isLoading: loadingSetupStatus } = useHasResellerSetupStatus();
@@ -196,6 +197,33 @@ const Auth = () => {
   // Check if already logged in
   useEffect(() => {
     const checkAuth = async () => {
+      // Se vier com o parâmetro "direct=true", faz login automático como o admin do restaurante
+      const params = new URLSearchParams(location.search);
+      if (params.get('direct') === 'true' && slug) {
+        setIsLoading(true);
+        try {
+          // Busca o admin vinculado a este restaurante
+          const { data: adminData } = await supabase
+            .from('restaurant_admins')
+            .select('user_id, restaurants(slug)')
+            .eq('restaurants.slug', slug)
+            .maybeSingle();
+
+          if (adminData?.user_id) {
+            // Em um sistema real, aqui você usaria um token de uso único ou impersonation.
+            // Para Lovable Cloud, verificamos se o usuário já tem uma sessão ativa.
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user.id === adminData.user_id) {
+              await checkRolesAndRedirect(session.user.id);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('Direct access error:', err);
+        }
+        setIsLoading(false);
+      }
+
       // Aguarda a verificação do setup-status para evitar redirect errado.
       if (loadingSetupStatus) return;
 
@@ -224,7 +252,7 @@ const Auth = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, slug, hasReseller, loadingSetupStatus]);
+  }, [navigate, slug, hasReseller, loadingSetupStatus, location.search]);
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
