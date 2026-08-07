@@ -37,6 +37,7 @@ export interface StoreConfig {
   timezone: string | null;
   business_type?: string | null;
   menu_labels?: Record<string, string> | null;
+  auth_password_required?: boolean;
 }
 
 // Campos adicionais opcionais usados pelo módulo de tracking.
