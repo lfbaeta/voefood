@@ -30,6 +30,7 @@ import {
   Check,
   X
 } from 'lucide-react';
+import { buildRestaurantUrl } from '@/lib/getSubdomain';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useResellerPayments, useUpdatePayment, useResellerStats } from '@/hooks/useReseller';
@@ -217,7 +218,7 @@ function SubscriptionsContent() {
                       <TableCell>
                         <button 
                           className="font-medium hover:underline"
-                          onClick={() => navigate(`/reseller/restaurants/${payment.restaurant_id}`)}
+                          onClick={() => window.open(`${buildRestaurantUrl(payment.restaurants?.slug || '')}/auth?direct=true`, '_blank')}
                         >
                           {payment.restaurants?.name || 'Estabelecimento'}
                         </button>

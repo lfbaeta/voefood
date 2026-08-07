@@ -18,8 +18,9 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Plus, QrCode, RefreshCw, Power, Trash2, Star, Webhook } from 'lucide-react';
+import { Loader2, Plus, QrCode, RefreshCw, Power, Trash2, Star, Webhook, ExternalLink } from 'lucide-react';
 import { QrCodeImage } from '@/components/whatsapp/QrCodeImage';
+import { buildRestaurantUrl } from '@/lib/getSubdomain';
 
 type Instance = {
   id: string;
@@ -257,6 +258,17 @@ export function EvolutionInstancesTab() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      const rest = restaurants.find(r => r.id === inst.restaurant_id);
+                      if (rest) window.open(`${buildRestaurantUrl(rest.slug)}/auth?direct=true`, '_blank');
+                    }}
+                    title="Acessar painel"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
                   {inst.status !== 'connected' ? (
                     <Button size="sm" variant="outline" onClick={() => handleConnect(inst)} disabled={busyId === inst.id}>
                       <QrCode className="h-4 w-4 mr-1" /> Conectar
