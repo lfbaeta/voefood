@@ -57,7 +57,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkRoles = async (userId: string) => {
     try {
-      // Check if user is a reseller (highest priority)
+      // Check if user is a Super Admin (app_role = 'admin')
+      const { data: isSuperAdmin } = await supabase.rpc('has_role', {
+        _user_id: userId,
+        _role: 'admin',
+      });
+
+      if (isSuperAdmin === true) {
+        setIsReseller(true);
+        setIsAdmin(true);
+        return;
+      }
+
+      // Check if user is a reseller
       const { data: resellerData, error: resellerError } = await supabase
         .from('resellers')
         .select('id')
