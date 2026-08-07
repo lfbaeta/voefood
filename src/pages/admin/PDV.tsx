@@ -214,6 +214,7 @@ export default function PDV() {
         open={quickSaleModalOpen}
         onOpenChange={setQuickSaleModalOpen}
         onCheckout={handleQuickSaleCheckout}
+        selectedOrderType={selectedOrderType}
       />
 
       <QuickSaleCheckout
@@ -223,6 +224,7 @@ export default function PDV() {
         customerName={quickSaleCustomerName}
         onSuccess={handleQuickSaleSuccess}
         onBack={handleQuickSaleBack}
+        selectedOrderType={selectedOrderType}
       />
     </AdminLayout>
   );

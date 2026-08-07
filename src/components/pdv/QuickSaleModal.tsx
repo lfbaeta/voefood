@@ -40,9 +40,10 @@ interface QuickSaleModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCheckout: (items: QuickSaleItem[], customerName: string) => void;
+  selectedOrderType: string | null;
 }
 
-export function QuickSaleModal({ open, onOpenChange, onCheckout }: QuickSaleModalProps) {
+export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderType }: QuickSaleModalProps) {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [items, setItems] = useState<QuickSaleItem[]>([]);
@@ -178,13 +179,22 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout }: QuickSaleModa
     onOpenChange(false);
   };
 
+  const getTitle = () => {
+    switch (selectedOrderType) {
+      case 'counter': return 'Venda Rápida / Balcão';
+      case 'pickup': return 'Venda Rápida / Retirada';
+      case 'delivery': return 'Venda Rápida / Delivery';
+      default: return 'Venda Rápida';
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" />
-            Venda Rápida / Balcão
+            {getTitle()}
           </DialogTitle>
         </DialogHeader>
 
