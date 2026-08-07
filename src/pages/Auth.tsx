@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useTheme } from '@/hooks/useTheme';
 import { z } from 'zod';
 import { useHasResellerSetupStatus } from '@/hooks/useHasResellerSetupStatus';
+import { useStoreConfig } from '@/hooks/useStore';
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: 'Email inválido' }),
