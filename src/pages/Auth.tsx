@@ -33,6 +33,7 @@ const Auth = () => {
   const slug = useSlug();
   const { toast } = useToast();
   const { data: hasReseller, isLoading: loadingSetupStatus } = useHasResellerSetupStatus();
+  const { data: store, isLoading: loadingStore } = useStoreConfig();
   const [mode, setMode] = useState<AuthMode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -89,11 +90,11 @@ const Auth = () => {
       // ============ Contexto: SUBDOMÍNIO de restaurante ============
       if (slug) {
         // Descobre o restaurante alvo pelo slug para checar autorização de super admin/reseller.
-        const { data: targetRestaurant } = await supabase
-          .from('restaurants')
-          .select('id')
-          .eq('slug', slug)
-          .maybeSingle();
+        const targetRestaurant = store;
+        
+        // Se o restaurante não exige senha no acesso via revendedor (magic login), podemos pular? 
+        // Na verdade, o magic login acontece no componente de acesso. 
+        // Se chegamos aqui, é porque o usuário clicou no link ou a sessão expirou.
 
         // Super admin global (app_role = 'admin'): acesso a qualquer restaurante.
         const { data: isSuper } = await supabase.rpc('has_role', {
