@@ -3,7 +3,7 @@ import { Restaurant } from '@/types/reseller';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Store, Calendar, CreditCard, ExternalLink, Settings, MoreVertical } from 'lucide-react';
+import { Store, Calendar, CreditCard, ExternalLink, Settings, MoreVertical, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
