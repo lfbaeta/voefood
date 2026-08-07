@@ -115,9 +115,22 @@ const Auth = () => {
             _restaurant_id: targetRestaurant.id,
           });
           if (isResOfThis === true) {
-            setIsLoading(false);
-            navigate(`${basePath}/admin`);
-            return;
+            const requiresPassword = (targetRestaurant as any)?.auth_password_required ?? true;
+            
+            if (!requiresPassword) {
+              setIsLoading(false);
+              navigate(`${basePath}/admin`);
+              return;
+            } else {
+              // Se exige senha, desloga o revendedor para permitir login do admin do restaurante
+              await supabase.auth.signOut();
+              setIsLoading(false);
+              toast({
+                title: 'Login obrigatório',
+                description: 'Este estabelecimento exige login e senha de administrador.',
+              });
+              return;
+            }
           }
           // Reseller de outra rede: manda de volta para o painel do revendedor.
           setIsLoading(false);
