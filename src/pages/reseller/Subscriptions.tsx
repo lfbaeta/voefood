@@ -31,6 +31,7 @@ import {
   X
 } from 'lucide-react';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openRestaurantDirect } from '@/lib/directAccess';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useResellerPayments, useUpdatePayment, useResellerStats } from '@/hooks/useReseller';

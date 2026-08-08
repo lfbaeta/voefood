@@ -15,6 +15,7 @@ import { ptBR } from 'date-fns/locale';
 import { PaymentBadge } from '@/components/reseller/SubscriptionBadge';
 import { useDemoGuard } from '@/hooks/useDemoGuard';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openRestaurantDirect } from '@/lib/directAccess';
 import { OnboardingChecklist } from '@/components/reseller/OnboardingChecklist';
 
 function DashboardContent() {

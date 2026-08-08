@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, QrCode, RefreshCw, Power, Trash2, Star, Webhook, ExternalLink } from 'lucide-react';
 import { QrCodeImage } from '@/components/whatsapp/QrCodeImage';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openRestaurantDirect } from '@/lib/directAccess';
 
 type Instance = {
   id: string;
