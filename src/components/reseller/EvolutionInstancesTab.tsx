@@ -263,7 +263,7 @@ export function EvolutionInstancesTab() {
                     variant="ghost" 
                     onClick={() => {
                       const rest = restaurants.find(r => r.id === inst.restaurant_id);
-                      if (rest) window.open(`${buildRestaurantUrl(rest.slug)}/auth?direct=true`, '_blank');
+                      if (rest) openRestaurantDirect(rest.slug, '_blank');
                     }}
                     title="Acessar painel"
                   >

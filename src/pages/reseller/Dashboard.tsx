@@ -157,7 +157,7 @@ function DashboardContent() {
                       restaurant={restaurant}
                       onView={(id) => navigate(`/reseller/restaurants/${id}`)}
                       onEdit={(id) => navigate(`/reseller/restaurants/${id}/edit`)}
-                      onManage={(id) => window.open(`${buildRestaurantUrl(restaurant.slug)}/auth?direct=true`, '_blank')}
+                      onManage={(id) => openRestaurantDirect(restaurant.slug, '_blank')}
                     />
                   ))
                 )}

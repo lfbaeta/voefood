@@ -40,6 +40,16 @@ export async function openRestaurantDirect(
   slug: string,
   target: '_self' | '_blank' = '_self',
 ): Promise<void> {
+  // Para '_blank', abre a janela de forma síncrona para não ser bloqueada
+  // pelo popup blocker (o await do getSession quebraria o gesto do usuário).
+  if (target === '_blank') {
+    const win = window.open('', '_blank');
+    const url = await buildDirectAccessUrl(slug);
+    if (win) win.location.href = url;
+    else window.open(url, '_blank');
+    return;
+  }
+
   const url = await buildDirectAccessUrl(slug);
   window.open(url, target);
 }
