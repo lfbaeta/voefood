@@ -37,7 +37,7 @@ const Auth = () => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -222,7 +222,7 @@ const Auth = () => {
           if (isSuper === true) {
             console.log('Acesso concedido: Super Administrador Master via Bypass.');
             setIsLoading(false);
-            navigate(`${basePath}/admin`);
+            navigate(`${basePath}/admin`, { replace: true });
             return;
           }
 
@@ -242,14 +242,13 @@ const Auth = () => {
             if (isResOfThis === true) {
               console.log('Acesso concedido: Revendedor responsável via Bypass.');
               setIsLoading(false);
-              navigate(`${basePath}/admin`);
+              navigate(`${basePath}/admin`, { replace: true });
               return;
             }
           }
         }
 
         // Se não for super admin/reseller daquela loja específica, segue o fluxo normal de redirecionamento de roles
-        // mas não exibe a tela de login se a sessão for válida para o contexto atual.
         await checkRolesAndRedirect(currentSession.user.id);
         return;
       }
@@ -472,16 +471,22 @@ const Auth = () => {
       </Helmet>
 
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md">
-          {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-              <UtensilsCrossed className="h-10 w-10 text-primary-foreground" />
-            </div>
+        {isLoading ? (
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-muted-foreground animate-pulse">Validando acesso master...</p>
           </div>
+        ) : (
+          <div className="w-full max-w-md">
+            {/* Logo */}
+            <div className="flex justify-center mb-8">
+              <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+                <UtensilsCrossed className="h-10 w-10 text-primary-foreground" />
+              </div>
+            </div>
 
-          {/* Card */}
-          <div className="bg-card rounded-3xl shadow-card p-8">
+            {/* Card */}
+            <div className="bg-card rounded-3xl shadow-card p-8">
             {(mode === 'forgot' || mode === 'signup') && (
               <button
                 type="button"
@@ -626,8 +631,9 @@ const Auth = () => {
             >
               ← Voltar ao cardápio
             </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   );
