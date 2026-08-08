@@ -31,6 +31,7 @@ import {
   X
 } from 'lucide-react';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openRestaurantDirect } from '@/lib/directAccess';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useResellerPayments, useUpdatePayment, useResellerStats } from '@/hooks/useReseller';
@@ -218,7 +219,7 @@ function SubscriptionsContent() {
                       <TableCell>
                         <button 
                           className="font-medium hover:underline"
-                          onClick={() => window.open(`${buildRestaurantUrl(payment.restaurants?.slug || '')}/auth?direct=true`, '_blank')}
+                          onClick={() => openRestaurantDirect(payment.restaurants?.slug || '', '_blank')}
                         >
                           {payment.restaurants?.name || 'Estabelecimento'}
                         </button>

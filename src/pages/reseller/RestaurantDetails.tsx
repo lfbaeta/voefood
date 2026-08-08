@@ -36,6 +36,7 @@ import { CommunicationHistory } from '@/components/reseller/CommunicationHistory
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openRestaurantDirect } from '@/lib/directAccess';
 
 
 function RestaurantDetailsContent() {
@@ -87,7 +88,7 @@ function RestaurantDetailsContent() {
           <ExternalLink className="h-4 w-4 mr-2" />
           Ver Cardápio
         </Button>
-        <Button onClick={() => window.open(`${buildRestaurantUrl(restaurant.slug)}/auth?direct=true`, '_self')}>
+        <Button onClick={() => openRestaurantDirect(restaurant.slug, '_self')}>
           <Settings className="h-4 w-4 mr-2" />
           Acessar Painel
         </Button>

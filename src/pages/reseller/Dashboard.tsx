@@ -15,6 +15,7 @@ import { ptBR } from 'date-fns/locale';
 import { PaymentBadge } from '@/components/reseller/SubscriptionBadge';
 import { useDemoGuard } from '@/hooks/useDemoGuard';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openRestaurantDirect } from '@/lib/directAccess';
 import { OnboardingChecklist } from '@/components/reseller/OnboardingChecklist';
 
 function DashboardContent() {
@@ -157,7 +158,7 @@ function DashboardContent() {
                       restaurant={restaurant}
                       onView={(id) => navigate(`/reseller/restaurants/${id}`)}
                       onEdit={(id) => navigate(`/reseller/restaurants/${id}/edit`)}
-                      onManage={(id) => window.open(`${buildRestaurantUrl(restaurant.slug)}/auth?direct=true`, '_blank')}
+                      onManage={(id) => openRestaurantDirect(restaurant.slug, '_blank')}
                     />
                   ))
                 )}

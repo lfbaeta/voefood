@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, QrCode, RefreshCw, Power, Trash2, Star, Webhook, ExternalLink } from 'lucide-react';
 import { QrCodeImage } from '@/components/whatsapp/QrCodeImage';
 import { buildRestaurantUrl } from '@/lib/getSubdomain';
+import { openRestaurantDirect } from '@/lib/directAccess';
 
 type Instance = {
   id: string;
@@ -263,7 +264,7 @@ export function EvolutionInstancesTab() {
                     variant="ghost" 
                     onClick={() => {
                       const rest = restaurants.find(r => r.id === inst.restaurant_id);
-                      if (rest) window.open(`${buildRestaurantUrl(rest.slug)}/auth?direct=true`, '_blank');
+                      if (rest) openRestaurantDirect(rest.slug, '_blank');
                     }}
                     title="Acessar painel"
                   >
