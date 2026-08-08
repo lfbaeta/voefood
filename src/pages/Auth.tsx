@@ -37,7 +37,7 @@ const Auth = () => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -472,15 +472,7 @@ const Auth = () => {
       </Helmet>
 
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        {isLoading && (
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background">
-            <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg animate-pulse mb-4">
-              <UtensilsCrossed className="h-10 w-10 text-primary-foreground" />
-            </div>
-            <p className="text-muted-foreground animate-pulse">Validando acesso master...</p>
-          </div>
-        )}
-        <div className={`w-full max-w-md ${isLoading ? 'invisible' : 'visible'}`}>
+        <div className="w-full max-w-md">
           {/* Logo */}
           <div className="flex justify-center mb-8">
             <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
