@@ -85,8 +85,8 @@ export function useStoreOpenStatus(restaurantId: string | null | undefined): Sto
     ? isStoreCurrentlyOpen(businessHours, new Date(nowTick), timezone)
     : true; // If no business hours configured, consider within hours
 
-  // Store is open only if manual toggle is ON and within business hours
-  const isOpen = manualOverride && withinBusinessHours;
+  // Store is open only if manual toggle is ON (this matches the user's request to obey the button)
+  const isOpen = manualOverride;
 
   return {
     isOpen,
