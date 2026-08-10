@@ -74,9 +74,6 @@ export function StoreInfo({ store }: StoreInfoProps) {
     if (!manualOverride) {
       return 'Loja fechada manualmente';
     }
-    if (!withinBusinessHours) {
-      return 'Fora do horário de atendimento';
-    }
     return 'Fechado';
   };
 

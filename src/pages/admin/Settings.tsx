@@ -117,33 +117,12 @@ const AdminSettings = () => {
     const newManualOverride = !manualOverride;
     setManualOverride(newManualOverride);
     
-    if (!newManualOverride && hours) {
-      const shouldBeOpen = isStoreCurrentlyOpen(hours);
-      try {
-        await updateStore.mutateAsync({
-          id: store.id,
-          is_open: shouldBeOpen
-        });
-        setFormData({
-          ...formData,
-          is_open: shouldBeOpen
-        });
-        toast({
-          title: 'Status sincronizado com horários',
-          description: shouldBeOpen ? 'Loja aberta conforme horário de funcionamento' : 'Loja fechada conforme horário de funcionamento'
-        });
-      } catch (error) {
-        toast({
-          title: 'Erro ao sincronizar',
-          variant: 'destructive'
-        });
-      }
-    } else {
-      toast({
-        title: 'Modo manual ativado',
-        description: 'Agora você pode abrir/fechar a loja manualmente'
-      });
-    }
+    toast({
+      title: newManualOverride ? 'Modo manual ativado' : 'Modo automático ativado',
+      description: newManualOverride 
+        ? 'Agora você tem controle total sobre o status da loja' 
+        : 'A loja passará a seguir os horários de funcionamento automaticamente'
+    });
   };
 
   const toggleStoreStatus = async () => {
@@ -190,7 +169,7 @@ const AdminSettings = () => {
         }).catch(() => {});
       }
     }
-  }, [hours, manualOverride]);
+  }, [hours, manualOverride, store?.id, formData.is_open, updateStore]);
 
   const handleEditHour = (hour: BusinessHour) => {
     setEditingHourId(hour.id);
