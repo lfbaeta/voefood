@@ -208,7 +208,7 @@ export function LandingPageSettings({ reseller, onUpdate }: LandingPageSettingsP
             <div className="flex gap-2">
               <div className="flex-1 flex">
                 <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                  {window.location.origin}/lp/
+                  https://voefood.com/lp/
                 </span>
                 <Input
                   id="slug"
