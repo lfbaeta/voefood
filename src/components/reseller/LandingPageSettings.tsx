@@ -158,7 +158,7 @@ export function LandingPageSettings({ reseller, onUpdate }: LandingPageSettingsP
   };
 
   const landingUrl = formData.slug 
-    ? `${window.location.origin}/lp/${formData.slug}` 
+    ? `https://voefood.com/lp/${formData.slug}` 
     : '';
 
   const handleCopyUrl = () => {
