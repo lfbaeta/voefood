@@ -470,18 +470,20 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
           </div>
 
           {/* Right side - Cart */}
-          <div className="w-72 flex flex-col border-l pl-4">
-            <div className="mb-3">
+          <div className="w-96 flex flex-col bg-muted/20 p-6 border-l">
+            <div className="mb-4">
+              <label className="text-sm font-medium mb-1.5 block">Nome do Cliente</label>
               <Input
-                placeholder="Nome do cliente (opcional)"
+                placeholder="Ex: João Silva"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
+                className="bg-background"
               />
             </div>
 
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold">Carrinho</h3>
-              <Badge variant="secondary">{items.length} itens</Badge>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Resumo do Pedido</h3>
+              <Badge variant="secondary" className="px-3 py-0.5">{items.length} itens</Badge>
             </div>
 
             <ScrollArea className="flex-1 min-h-0">
