@@ -209,17 +209,17 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[95vw] w-[95vw] h-[95vh] flex flex-col p-0">
-        <DialogHeader>
+        <DialogHeader className="px-6 py-4 border-b">
           <div className="flex items-center justify-between pr-10">
             <div className="flex flex-col">
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2 text-2xl">
                 {getTypeIcon()}
                 {getTitle()}
               </DialogTitle>
               {selectedOrderType && (
                 <button 
                   onClick={handleChangeOrderType}
-                  className="text-xs text-primary hover:underline text-left w-fit"
+                  className="text-sm text-primary hover:underline text-left w-fit"
                 >
                   Alterar tipo de pedido
                 </button>
