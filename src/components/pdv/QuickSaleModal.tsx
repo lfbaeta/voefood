@@ -59,7 +59,8 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
   const [observation, setObservation] = useState('');
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
 
-  const { data: products, isLoading: loadingProducts } = useProducts();
+  const { restaurantId, isLoading: loadingId } = useEffectiveRestaurantId();
+  const { data: products, isLoading: loadingProducts, error: productsError } = useProducts();
   const { data: categories } = useCategories();
   const { data: productAddons } = useProductAddons(selectedProduct?.id || '');
 
