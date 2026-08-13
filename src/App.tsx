@@ -120,9 +120,14 @@ function LegacySlugRedirect() {
 }
 
 function RestaurantRoutes() {
+  const [searchParams] = useSearchParams();
+  const tableNumber = searchParams.get('table');
+
   return (
     <Routes>
       <Route path="/" element={<Index />} />
+      {/* Fallback for deep links that might miss the slug prefix in path-based routing */}
+      {tableNumber && <Route path={tableNumber} element={<Index />} />}
       <Route path="cart" element={<Cart />} />
       <Route path="checkout" element={<Checkout />} />
       <Route path="payment/:id" element={<OnlinePayment />} />
