@@ -11,6 +11,8 @@ import { OrderHistoryModal } from '@/components/pdv/OrderHistoryModal';
 import { QuickSaleModal } from '@/components/pdv/QuickSaleModal';
 import { QuickSaleOrderTypeModal, OrderType } from '@/components/pdv/QuickSaleOrderTypeModal';
 import { QuickSaleCheckout } from '@/components/pdv/QuickSaleCheckout';
+import { Badge } from '@/components/ui/badge';
+import { Store, Truck, ShoppingBag as ShoppingBagIcon } from 'lucide-react';
 import { TableWithOrder, Table } from '@/types/pdv';
 import { useTablesWithOrders } from '@/hooks/useTables';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
