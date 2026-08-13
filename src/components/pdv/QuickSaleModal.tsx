@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Minus, ShoppingBag, Trash2, ChevronRight } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingBag, Trash2, ChevronRight, Store, Truck } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useProductAddons, AddonGroup, AddonOption } from '@/hooks/useAddons';
+import { useEffectiveRestaurantId } from '@/hooks/useEffectiveRestaurantId';
 import { cn } from '@/lib/utils';
 
 interface QuickSaleItem {
@@ -59,7 +60,8 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
   const [observation, setObservation] = useState('');
   const [selectedAddons, setSelectedAddons] = useState<SelectedAddon[]>([]);
 
-  const { data: products, isLoading: loadingProducts } = useProducts();
+  const { restaurantId, isLoading: loadingId } = useEffectiveRestaurantId();
+  const { data: products, isLoading: loadingProducts, error: productsError } = useProducts();
   const { data: categories } = useCategories();
   const { data: productAddons } = useProductAddons(selectedProduct?.id || '');
 
@@ -179,6 +181,13 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
     onOpenChange(false);
   };
 
+  const handleChangeOrderType = () => {
+    onOpenChange(false);
+    // The parent PDV component will handle opening the OrderTypeModal again
+    const event = new CustomEvent('pdv-change-order-type');
+    window.dispatchEvent(event);
+  };
+
   const getTitle = () => {
     switch (selectedOrderType) {
       case 'counter': return 'Venda Rápida / Balcão';
@@ -188,14 +197,38 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
     }
   };
 
+  const getTypeIcon = () => {
+    switch (selectedOrderType) {
+      case 'counter': return <ShoppingBag className="h-5 w-5" />;
+      case 'pickup': return <Store className="h-5 w-5" />;
+      case 'delivery': return <Truck className="h-5 w-5" />;
+      default: return <ShoppingBag className="h-5 w-5" />;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5" />
-            {getTitle()}
-          </DialogTitle>
+          <div className="flex items-center justify-between pr-10">
+            <div className="flex flex-col">
+              <DialogTitle className="flex items-center gap-2">
+                {getTypeIcon()}
+                {getTitle()}
+              </DialogTitle>
+              {selectedOrderType && (
+                <button 
+                  onClick={handleChangeOrderType}
+                  className="text-xs text-primary hover:underline text-left w-fit"
+                >
+                  Alterar tipo de pedido
+                </button>
+              )}
+            </div>
+            {!loadingId && !restaurantId && (
+              <Badge variant="destructive">Estabelecimento não identificado</Badge>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex flex-1 gap-4 min-h-0">
@@ -238,13 +271,43 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
 
                 {/* Products Grid */}
                 <ScrollArea className="flex-1">
-                  {loadingProducts ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Carregando produtos...
+                  {loadingProducts || loadingId ? (
+                    <div className="text-center py-12 flex flex-col items-center gap-3">
+                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                      <p className="text-muted-foreground">Carregando produtos...</p>
+                    </div>
+                  ) : productsError ? (
+                    <div className="text-center py-12 text-destructive">
+                      Erro ao carregar produtos. Por favor, tente novamente.
+                    </div>
+                  ) : !restaurantId ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <p className="font-medium">Contexto do restaurante não encontrado.</p>
+                      <p className="text-sm">Certifique-se de que está acessando através do painel administrativo.</p>
                     </div>
                   ) : filteredProducts.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhum produto encontrado
+                    <div className="text-center py-12 flex flex-col items-center gap-4">
+                      <div className="bg-muted p-4 rounded-full">
+                        <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-medium text-muted-foreground">
+                          {search ? 'Nenhum produto encontrado para sua busca' : 'Nenhum produto cadastrado'}
+                        </p>
+                        {!search && (
+                          <p className="text-sm text-muted-foreground">
+                            Cadastre produtos no menu lateral para que apareçam aqui.
+                          </p>
+                        )}
+                      </div>
+                      {!search && (
+                        <Button 
+                          variant="outline" 
+                          onClick={() => window.location.href = '/admin/produtos'}
+                        >
+                          Ir para Cadastro de Produtos
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-1">

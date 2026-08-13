@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { useTableOrderMutations } from '@/hooks/useTableOrders';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
 import { useStoreConfig } from '@/hooks/useStore';
@@ -258,7 +259,15 @@ export function QuickSaleCheckout({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Finalizar Venda</DialogTitle>
+          <div className="flex items-center justify-between pr-8">
+            <DialogTitle>Finalizar Venda</DialogTitle>
+            {selectedOrderType && (
+              <Badge variant="outline" className="capitalize">
+                {selectedOrderType === 'counter' ? 'Balcão' : 
+                 selectedOrderType === 'pickup' ? 'Retirada' : 'Delivery'}
+              </Badge>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-hidden">

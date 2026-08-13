@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings2, Plus, History, ShoppingBag } from 'lucide-react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import { OrderHistoryModal } from '@/components/pdv/OrderHistoryModal';
 import { QuickSaleModal } from '@/components/pdv/QuickSaleModal';
 import { QuickSaleOrderTypeModal, OrderType } from '@/components/pdv/QuickSaleOrderTypeModal';
 import { QuickSaleCheckout } from '@/components/pdv/QuickSaleCheckout';
+import { Badge } from '@/components/ui/badge';
+import { Store, Truck, ShoppingBag as ShoppingBagIcon } from 'lucide-react';
 import { TableWithOrder, Table } from '@/types/pdv';
 import { useTablesWithOrders } from '@/hooks/useTables';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
@@ -51,6 +53,17 @@ export default function PDV() {
   const [quickSaleItems, setQuickSaleItems] = useState<QuickSaleItem[]>([]);
   const [quickSaleCustomerName, setQuickSaleCustomerName] = useState('');
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType | null>(null);
+
+  useEffect(() => {
+    const handleChangeOrderType = () => {
+      setOrderTypeModalOpen(true);
+    };
+
+    window.addEventListener('pdv-change-order-type', handleChangeOrderType);
+    return () => {
+      window.removeEventListener('pdv-change-order-type', handleChangeOrderType);
+    };
+  }, []);
 
   const { tables } = useTablesWithOrders();
 
