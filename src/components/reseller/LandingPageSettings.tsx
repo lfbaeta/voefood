@@ -74,13 +74,13 @@ export function LandingPageSettings({ reseller, onUpdate }: LandingPageSettingsP
       const filePath = `landing-logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('public')
+        .from('store-assets')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('public')
+        .from('store-assets')
         .getPublicUrl(filePath);
 
       setFormData({ ...formData, landing_page_logo: publicUrl });
