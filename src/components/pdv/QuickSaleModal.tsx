@@ -320,12 +320,16 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
                             "bg-card"
                           )}
                         >
-                          {product.image_url && (
+                          {product.image_url ? (
                             <img
                               src={product.image_url}
                               alt={product.name}
-                              className="w-full h-16 object-cover rounded-lg mb-2"
+                              className="w-full h-32 object-cover rounded-lg mb-3"
                             />
+                          ) : (
+                            <div className="w-full h-32 bg-muted rounded-lg mb-3 flex items-center justify-center">
+                              <ShoppingBag className="h-8 w-8 text-muted-foreground/30" />
+                            </div>
                           )}
                           <p className="font-medium text-sm text-foreground line-clamp-2">
                             {product.name}
