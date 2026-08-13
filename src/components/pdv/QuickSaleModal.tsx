@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, Plus, Minus, ShoppingBag, Trash2, ChevronRight } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingBag, Trash2, ChevronRight, Store, Truck } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
