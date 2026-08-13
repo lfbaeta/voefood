@@ -303,7 +303,7 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
                       {!search && (
                         <Button 
                           variant="outline" 
-                          onClick={() => window.location.href = '/admin/produtos'}
+                          onClick={() => window.open('/admin/products', '_blank')}
                         >
                           Ir para Cadastro de Produtos
                         </Button>
