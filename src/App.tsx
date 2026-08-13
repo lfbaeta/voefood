@@ -186,9 +186,10 @@ function RootRoutes() {
     <Routes>
       <Route path="/" element={<InitialRedirect />} />
       <Route path="/auth" element={<Auth />} />
+      <Route path="/admin/*" element={<AdminOnRoot />} />
+      <Route path="/lp/:resellerSlug" element={<Landing />} />
       <Route path="/:slug" element={<LegacySlugRedirect />} />
       <Route path="/r/:slug/*" element={<LegacySlugRedirect />} />
-      <Route path="/admin/*" element={<AdminOnRoot />} />
       <Route path="/lp/:resellerSlug" element={<Landing />} />
 
       <Route
