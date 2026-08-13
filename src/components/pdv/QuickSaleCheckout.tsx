@@ -105,6 +105,7 @@ export function QuickSaleCheckout({
         tableId: null, // No table for quick sale
         customerCount: 1,
         waiterName: customerName || (selectedOrderType === 'delivery' ? 'Delivery' : selectedOrderType === 'pickup' ? 'Retirada' : 'Balcão'),
+        orderType: selectedOrderType as any,
       });
 
       const orderId = order.id;

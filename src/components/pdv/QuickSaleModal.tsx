@@ -208,18 +208,18 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[95vw] w-[95vw] h-[95vh] flex flex-col p-0">
+        <DialogHeader className="px-6 py-4 border-b">
           <div className="flex items-center justify-between pr-10">
             <div className="flex flex-col">
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2 text-2xl">
                 {getTypeIcon()}
                 {getTitle()}
               </DialogTitle>
               {selectedOrderType && (
                 <button 
                   onClick={handleChangeOrderType}
-                  className="text-xs text-primary hover:underline text-left w-fit"
+                  className="text-sm text-primary hover:underline text-left w-fit"
                 >
                   Alterar tipo de pedido
                 </button>
@@ -231,9 +231,9 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
           </div>
         </DialogHeader>
 
-        <div className="flex flex-1 gap-4 min-h-0">
+        <div className="flex flex-1 gap-0 min-h-0 overflow-hidden">
           {/* Left side - Product selection */}
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-[3] flex flex-col min-w-0 border-r p-6">
             {!selectedProduct ? (
               <>
                 {/* Search */}
@@ -303,14 +303,14 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
                       {!search && (
                         <Button 
                           variant="outline" 
-                          onClick={() => window.location.href = '/admin/produtos'}
+                          onClick={() => window.open('/admin/products', '_blank')}
                         >
                           Ir para Cadastro de Produtos
                         </Button>
                       )}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-1">
                       {filteredProducts.map((product) => (
                         <button
                           key={product.id}
@@ -320,12 +320,16 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
                             "bg-card"
                           )}
                         >
-                          {product.image_url && (
+                          {product.image_url ? (
                             <img
                               src={product.image_url}
                               alt={product.name}
-                              className="w-full h-16 object-cover rounded-lg mb-2"
+                              className="w-full h-32 object-cover rounded-lg mb-3"
                             />
+                          ) : (
+                            <div className="w-full h-32 bg-muted rounded-lg mb-3 flex items-center justify-center">
+                              <ShoppingBag className="h-8 w-8 text-muted-foreground/30" />
+                            </div>
                           )}
                           <p className="font-medium text-sm text-foreground line-clamp-2">
                             {product.name}
@@ -341,8 +345,8 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
               </>
             ) : (
               /* Product Details with Addons */
-              <ScrollArea className="flex-1">
-                <div className="space-y-4 pr-2">
+              <ScrollArea className="flex-1 p-6 bg-muted/30">
+                <div className="max-w-2xl mx-auto space-y-6 pr-2">
                   <div className="bg-muted rounded-xl p-4">
                     <h3 className="font-bold text-lg">{selectedProduct.name}</h3>
                     <p className="text-primary font-bold text-xl">
@@ -466,18 +470,20 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
           </div>
 
           {/* Right side - Cart */}
-          <div className="w-72 flex flex-col border-l pl-4">
-            <div className="mb-3">
+          <div className="w-96 flex flex-col bg-muted/20 p-6 border-l">
+            <div className="mb-4">
+              <label className="text-sm font-medium mb-1.5 block">Nome do Cliente</label>
               <Input
-                placeholder="Nome do cliente (opcional)"
+                placeholder="Ex: João Silva"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
+                className="bg-background"
               />
             </div>
 
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold">Carrinho</h3>
-              <Badge variant="secondary">{items.length} itens</Badge>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Resumo do Pedido</h3>
+              <Badge variant="secondary" className="px-3 py-0.5">{items.length} itens</Badge>
             </div>
 
             <ScrollArea className="flex-1 min-h-0">
@@ -528,22 +534,22 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
               )}
             </ScrollArea>
 
-            <div className="border-t pt-3 mt-3 space-y-3">
+            <div className="border-t pt-6 mt-4 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="font-semibold">Total</span>
-                <span className="text-xl font-bold text-primary">
+                <span className="text-lg font-semibold">Total a Pagar</span>
+                <span className="text-3xl font-black text-primary">
                   {formatCurrency(cartTotal)}
                 </span>
               </div>
               
               <Button
-                className="w-full"
+                className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/20"
                 size="lg"
                 disabled={items.length === 0}
                 onClick={handleCheckout}
               >
-                Finalizar
-                <ChevronRight className="h-4 w-4 ml-2" />
+                Continuar para Pagamento
+                <ChevronRight className="h-5 w-5 ml-2" />
               </Button>
             </div>
           </div>

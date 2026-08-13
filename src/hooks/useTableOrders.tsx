@@ -109,7 +109,7 @@ export function useTableOrderMutations() {
   });
 
   const openTable = useMutation({
-    mutationFn: async (data: { tableId: string | null; customerCount?: number; waiterName?: string; waiterId?: string; restaurant_id?: string }) => {
+    mutationFn: async (data: { tableId: string | null; customerCount?: number; waiterName?: string; waiterId?: string; restaurant_id?: string; orderType?: string }) => {
       const effectiveRestaurantId = data.restaurant_id || restaurantId;
 
       const { data: order, error: orderError } = await supabase
@@ -127,6 +127,7 @@ export function useTableOrderMutations() {
           service_fee_percentage: 10,
           total_amount: 0,
           restaurant_id: effectiveRestaurantId,
+          order_type: data.orderType || (data.tableId ? 'table' : 'counter'),
         })
         .select()
         .single();
