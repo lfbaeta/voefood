@@ -208,7 +208,7 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[95vw] w-[95vw] h-[95vh] flex flex-col p-0">
         <DialogHeader>
           <div className="flex items-center justify-between pr-10">
             <div className="flex flex-col">
