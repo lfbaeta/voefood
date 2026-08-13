@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useSearchParams } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { CartProvider } from "@/hooks/useCart";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -105,7 +105,8 @@ function PageFallback() {
 
 function LegacySlugRedirect() {
   const location = useLocation();
-  const match = location.pathname.match(/^\/r\/([^/]+)(\/.*)?$/);
+  // Match both /r/slug and /slug (for direct table links)
+  const match = location.pathname.match(/^\/(?:r\/)?([^/]+)(\/.*)?$/);
   if (!match) return <NotFound />;
   const slug = match[1];
   const rest = match[2] ?? "";
@@ -120,9 +121,14 @@ function LegacySlugRedirect() {
 }
 
 function RestaurantRoutes() {
+  const [searchParams] = useSearchParams();
+  const tableNumber = searchParams.get('table');
+
   return (
     <Routes>
       <Route path="/" element={<Index />} />
+      {/* Fallback for deep links that might miss the slug prefix in path-based routing */}
+      {tableNumber && <Route path={tableNumber} element={<Index />} />}
       <Route path="cart" element={<Cart />} />
       <Route path="checkout" element={<Checkout />} />
       <Route path="payment/:id" element={<OnlinePayment />} />
@@ -180,8 +186,10 @@ function RootRoutes() {
     <Routes>
       <Route path="/" element={<InitialRedirect />} />
       <Route path="/auth" element={<Auth />} />
-      <Route path="/r/:slug/*" element={<LegacySlugRedirect />} />
       <Route path="/admin/*" element={<AdminOnRoot />} />
+      <Route path="/lp/:resellerSlug" element={<Landing />} />
+      <Route path="/:slug" element={<LegacySlugRedirect />} />
+      <Route path="/r/:slug/*" element={<LegacySlugRedirect />} />
       <Route path="/lp/:resellerSlug" element={<Landing />} />
 
       <Route
