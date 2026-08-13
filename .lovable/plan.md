@@ -1,30 +1,34 @@
 # Plano de Correção: PDV - Produtos não aparecem e Fluxo de Venda Rápida
 
-O usuário relatou dois problemas no PDV:
-1. Os produtos cadastrados não estão aparecendo na tela de seleção.
-2. O fluxo de "Venda Rápida" está invertido ou confuso: a seleção do tipo de pedido (Retirada, Balcão, Delivery) aparece *após* a confirmação (ou o usuário deseja que ela seja a primeira etapa, o que já parece ser o caso no código, mas pode haver um bug visual ou de estado).
+O usuário relatou que os produtos não aparecem no PDV e que, na "Venda Rápida", após confirmar (possivelmente a seleção de produtos), o sistema pergunta para onde enviar (Retirada, Balcão, Delivery). Ele parece sugerir que essa escolha deveria ser mais clara ou ocorrer em um momento diferente do fluxo.
 
 ## Diagnóstico
-- **Produtos não aparecendo**: O `QuickSaleModal` utiliza o hook `useProducts`, que depende de `restaurantId`. Se o `restaurantId` não estiver sendo resolvido corretamente no contexto do PDV (especialmente se o usuário for um Super Admin ou Revendedor acessando via SSO), os produtos não serão listados.
-- **Fluxo de Venda Rápida**: No código atual (`src/pages/admin/PDV.tsx`), ao clicar em "Venda Rápida", abre-se o `QuickSaleOrderTypeModal`. Após a seleção, abre-se o `QuickSaleModal`. O relato do usuário sugere que ele espera que essa escolha seja clara e que os produtos apareçam logo em seguida.
+
+### 1. Produtos não aparecendo no PDV
+- **Causa Provável**: O `QuickSaleModal` usa o hook `useProducts`, que depende do `restaurantId` retornado por `useEffectiveRestaurantId`. Se o `restaurantId` não for resolvido (ex: em sessões de Super Admin via SSO que ainda não vincularam o contexto do restaurante), a lista de produtos virá vazia.
+- **Outra Possibilidade**: Filtro de `is_available` ou erros de RLS.
+
+### 2. Fluxo de Venda Rápida
+- **Fluxo Atual**: `Botão Venda Rápida` -> `Modal Tipo de Pedido (Retirada, Balcão, Delivery)` -> `Modal de Seleção de Produtos` -> `Checkout`.
+- **Relato do Usuário**: "depois de confirmar aparece vai ser enviado pra onde". Isso indica que ele pode estar achando o fluxo confuso ou que o estado do tipo de pedido não está visível durante a venda.
 
 ## Alterações Propostas
 
-### 1. Frontend: Verificação do `restaurantId` no PDV
-- Validar se o `restaurantId` está presente antes de abrir os modais de venda.
-- Adicionar logs de depuração temporários ou estados de carregamento mais claros se os produtos demorarem a carregar.
-- Garantir que `useEffectiveRestaurantId` (usado por `useProducts`) esteja capturando corretamente o ID em sessões administrativas.
+### 1. Correção da Listagem de Produtos (`src/components/pdv/QuickSaleModal.tsx`)
+- Adicionar logs de depuração para verificar se `restaurantId` está presente.
+- Adicionar um estado de "Alerta/Erro" caso o `restaurantId` seja nulo, informando que o contexto do estabelecimento não foi carregado.
+- Garantir que o carregamento dos produtos seja exibido claramente.
 
-### 2. Frontend: Melhoria no `QuickSaleModal.tsx`
-- Verificar a lógica de filtragem `is_available`. Se os produtos estiverem cadastrados mas marcados como indisponíveis, eles não aparecem.
-- Adicionar um estado visual para quando a lista de produtos estiver vazia, incentivando o cadastro ou verificando a conexão.
+### 2. Otimização do Fluxo de Venda Rápida (`src/pages/admin/PDV.tsx` e `src/components/pdv/QuickSaleModal.tsx`)
+- Manter o tipo de pedido visível no cabeçalho do `QuickSaleModal` (já existe o método `getTitle`, mas vamos garantir que ele seja proeminente).
+- Se o usuário reportou que "depois de confirmar aparece", pode haver uma confusão no `QuickSaleCheckout` onde o `selectedOrderType` é usado apenas como fallback para o nome do atendente/garçom. Vamos tornar a seleção do tipo de pedido mais explícita ou permitir alteração se necessário.
 
-### 3. Ajuste no Fluxo de Venda Rápida
-- No `PDV.tsx`, garantir que a transição entre `QuickSaleOrderTypeModal` e `QuickSaleModal` seja fluida.
-- Verificar se o `selectedOrderType` está sendo passado e utilizado corretamente para filtrar ou exibir informações.
+### 3. Melhoria na Experiência do Usuário (UX)
+- Adicionar uma mensagem de "Nenhum produto cadastrado" com um botão de atalho para o cadastro de produtos, caso a lista retorne vazia mas o `restaurantId` exista.
 
 ## Detalhes Técnicos
-- Arquivos afetados:
-    - `src/pages/admin/PDV.tsx`: Gerenciamento de estado dos modais.
-    - `src/components/pdv/QuickSaleModal.tsx`: Renderização da lista de produtos e filtros.
-- Verificação de RLS: Confirmar se a política de `SELECT` na tabela `products` permite que o usuário atual (Admin/Reseller) veja os itens. (Já verificado em migrações anteriores, mas vale confirmar no contexto do hook).
+- Arquivos:
+  - `src/components/pdv/QuickSaleModal.tsx`
+  - `src/pages/admin/PDV.tsx`
+  - `src/hooks/useEffectiveRestaurantId.tsx` (verificar se precisa de suporte extra para contexto de admin)
+
