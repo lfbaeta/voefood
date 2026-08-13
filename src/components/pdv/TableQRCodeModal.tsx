@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { QrCode, Download, X } from 'lucide-react';
+import { buildRestaurantUrl } from '@/lib/getSubdomain';
 import {
   Dialog,
   DialogContent,
@@ -21,8 +22,9 @@ export function TableQRCodeModal({ open, onOpenChange, tableNumber, slug }: Tabl
 
   useEffect(() => {
     if (open) {
-      // Constructing public URL linking table to menu
-      const url = `${window.location.origin}/${slug}?table=${tableNumber}`;
+      // Constructing public URL linking table to menu using helper for cross-environment consistency
+      const baseUrl = buildRestaurantUrl(slug);
+      const url = `${baseUrl}?table=${tableNumber}`;
       setQrUrl(url);
     }
   }, [open, tableNumber, slug]);
