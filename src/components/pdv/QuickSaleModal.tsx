@@ -231,9 +231,9 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
           </div>
         </DialogHeader>
 
-        <div className="flex flex-1 gap-4 min-h-0">
+        <div className="flex flex-1 gap-0 min-h-0 overflow-hidden">
           {/* Left side - Product selection */}
-          <div className="flex-1 flex flex-col min-w-0">
+          <div className="flex-[3] flex flex-col min-w-0 border-r p-6">
             {!selectedProduct ? (
               <>
                 {/* Search */}
