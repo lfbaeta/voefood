@@ -341,8 +341,8 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
               </>
             ) : (
               /* Product Details with Addons */
-              <ScrollArea className="flex-1">
-                <div className="space-y-4 pr-2">
+              <ScrollArea className="flex-1 p-6 bg-muted/30">
+                <div className="max-w-2xl mx-auto space-y-6 pr-2">
                   <div className="bg-muted rounded-xl p-4">
                     <h3 className="font-bold text-lg">{selectedProduct.name}</h3>
                     <p className="text-primary font-bold text-xl">
