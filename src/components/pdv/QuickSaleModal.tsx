@@ -245,13 +245,43 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
 
                 {/* Products Grid */}
                 <ScrollArea className="flex-1">
-                  {loadingProducts ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Carregando produtos...
+                  {loadingProducts || loadingId ? (
+                    <div className="text-center py-12 flex flex-col items-center gap-3">
+                      <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                      <p className="text-muted-foreground">Carregando produtos...</p>
+                    </div>
+                  ) : productsError ? (
+                    <div className="text-center py-12 text-destructive">
+                      Erro ao carregar produtos. Por favor, tente novamente.
+                    </div>
+                  ) : !restaurantId ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <p className="font-medium">Contexto do restaurante não encontrado.</p>
+                      <p className="text-sm">Certifique-se de que está acessando através do painel administrativo.</p>
                     </div>
                   ) : filteredProducts.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Nenhum produto encontrado
+                    <div className="text-center py-12 flex flex-col items-center gap-4">
+                      <div className="bg-muted p-4 rounded-full">
+                        <ShoppingBag className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-medium text-muted-foreground">
+                          {search ? 'Nenhum produto encontrado para sua busca' : 'Nenhum produto cadastrado'}
+                        </p>
+                        {!search && (
+                          <p className="text-sm text-muted-foreground">
+                            Cadastre produtos no menu lateral para que apareçam aqui.
+                          </p>
+                        )}
+                      </div>
+                      {!search && (
+                        <Button 
+                          variant="outline" 
+                          onClick={() => window.location.href = '/admin/produtos'}
+                        >
+                          Ir para Cadastro de Produtos
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-1">
