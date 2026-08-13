@@ -258,7 +258,15 @@ export function QuickSaleCheckout({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Finalizar Venda</DialogTitle>
+          <div className="flex items-center justify-between pr-8">
+            <DialogTitle>Finalizar Venda</DialogTitle>
+            {selectedOrderType && (
+              <Badge variant="outline" className="capitalize">
+                {selectedOrderType === 'counter' ? 'Balcão' : 
+                 selectedOrderType === 'pickup' ? 'Retirada' : 'Delivery'}
+              </Badge>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex-1 space-y-4 overflow-hidden">
