@@ -54,6 +54,17 @@ export default function PDV() {
   const [quickSaleCustomerName, setQuickSaleCustomerName] = useState('');
   const [selectedOrderType, setSelectedOrderType] = useState<OrderType | null>(null);
 
+  useEffect(() => {
+    const handleChangeOrderType = () => {
+      setOrderTypeModalOpen(true);
+    };
+
+    window.addEventListener('pdv-change-order-type', handleChangeOrderType);
+    return () => {
+      window.removeEventListener('pdv-change-order-type', handleChangeOrderType);
+    };
+  }, []);
+
   const { tables } = useTablesWithOrders();
 
   const handleTableClick = (table: TableWithOrder) => {
