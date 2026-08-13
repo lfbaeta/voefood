@@ -105,7 +105,8 @@ function PageFallback() {
 
 function LegacySlugRedirect() {
   const location = useLocation();
-  const match = location.pathname.match(/^\/r\/([^/]+)(\/.*)?$/);
+  // Match both /r/slug and /slug (for direct table links)
+  const match = location.pathname.match(/^\/(?:r\/)?([^/]+)(\/.*)?$/);
   if (!match) return <NotFound />;
   const slug = match[1];
   const rest = match[2] ?? "";
