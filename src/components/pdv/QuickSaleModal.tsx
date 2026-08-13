@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
 import { useProductAddons, AddonGroup, AddonOption } from '@/hooks/useAddons';
+import { useEffectiveRestaurantId } from '@/hooks/useEffectiveRestaurantId';
 import { cn } from '@/lib/utils';
 
 interface QuickSaleItem {
