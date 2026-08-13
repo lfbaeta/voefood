@@ -534,22 +534,22 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
               )}
             </ScrollArea>
 
-            <div className="border-t pt-3 mt-3 space-y-3">
+            <div className="border-t pt-6 mt-4 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="font-semibold">Total</span>
-                <span className="text-xl font-bold text-primary">
+                <span className="text-lg font-semibold">Total a Pagar</span>
+                <span className="text-3xl font-black text-primary">
                   {formatCurrency(cartTotal)}
                 </span>
               </div>
               
               <Button
-                className="w-full"
+                className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/20"
                 size="lg"
                 disabled={items.length === 0}
                 onClick={handleCheckout}
               >
-                Finalizar
-                <ChevronRight className="h-4 w-4 ml-2" />
+                Continuar para Pagamento
+                <ChevronRight className="h-5 w-5 ml-2" />
               </Button>
             </div>
           </div>
