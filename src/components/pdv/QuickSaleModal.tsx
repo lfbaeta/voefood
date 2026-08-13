@@ -194,10 +194,15 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5" />
-            {getTitle()}
-          </DialogTitle>
+          <div className="flex items-center justify-between pr-6">
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5" />
+              {getTitle()}
+            </DialogTitle>
+            {!loadingId && !restaurantId && (
+              <Badge variant="destructive">Estabelecimento não identificado</Badge>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex flex-1 gap-4 min-h-0">
