@@ -109,7 +109,7 @@ export function useTableOrderMutations() {
   });
 
   const openTable = useMutation({
-    mutationFn: async (data: { tableId: string | null; customerCount?: number; waiterName?: string; waiterId?: string; restaurant_id?: string }) => {
+    mutationFn: async (data: { tableId: string | null; customerCount?: number; waiterName?: string; waiterId?: string; restaurant_id?: string; orderType?: string }) => {
       const effectiveRestaurantId = data.restaurant_id || restaurantId;
 
       const { data: order, error: orderError } = await supabase
