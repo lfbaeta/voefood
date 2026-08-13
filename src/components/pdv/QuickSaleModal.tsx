@@ -181,12 +181,28 @@ export function QuickSaleModal({ open, onOpenChange, onCheckout, selectedOrderTy
     onOpenChange(false);
   };
 
+  const handleChangeOrderType = () => {
+    onOpenChange(false);
+    // The parent PDV component will handle opening the OrderTypeModal again
+    const event = new CustomEvent('pdv-change-order-type');
+    window.dispatchEvent(event);
+  };
+
   const getTitle = () => {
     switch (selectedOrderType) {
       case 'counter': return 'Venda Rápida / Balcão';
       case 'pickup': return 'Venda Rápida / Retirada';
       case 'delivery': return 'Venda Rápida / Delivery';
       default: return 'Venda Rápida';
+    }
+  };
+
+  const getTypeIcon = () => {
+    switch (selectedOrderType) {
+      case 'counter': return <ShoppingBag className="h-5 w-5" />;
+      case 'pickup': return <Store className="h-5 w-5" />;
+      case 'delivery': return <Truck className="h-5 w-5" />;
+      default: return <ShoppingBag className="h-5 w-5" />;
     }
   };
 
