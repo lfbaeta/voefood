@@ -318,6 +318,45 @@ export function QuickSaleCheckout({
             </div>
           </div>
 
+          {/* Delivery customer registration */}
+          {isDelivery && (
+            <div className="border rounded-xl p-4 space-y-3">
+              <h3 className="font-semibold">Dados do cliente (entrega)</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="delName">Nome *</Label>
+                  <Input id="delName" value={deliveryName} onChange={(e) => setDeliveryName(e.target.value)} placeholder="Nome do cliente" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="delPhone">Telefone / WhatsApp *</Label>
+                  <Input id="delPhone" value={deliveryPhone} onChange={(e) => setDeliveryPhone(e.target.value)} placeholder="(00) 00000-0000" />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <Label htmlFor="delStreet">Rua *</Label>
+                  <Input id="delStreet" value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} placeholder="Rua / Avenida" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="delNumber">Número *</Label>
+                  <Input id="delNumber" value={addressNumber} onChange={(e) => setAddressNumber(e.target.value)} placeholder="123" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="delHood">Bairro *</Label>
+                  <Input id="delHood" value={addressNeighborhood} onChange={(e) => setAddressNeighborhood(e.target.value)} placeholder="Bairro" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="delComp">Complemento</Label>
+                  <Input id="delComp" value={addressComplement} onChange={(e) => setAddressComplement(e.target.value)} placeholder="Apto, bloco..." />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="delRef">Referência</Label>
+                  <Input id="delRef" value={addressReference} onChange={(e) => setAddressReference(e.target.value)} placeholder="Ponto de referência" />
+                </div>
+              </div>
+            </div>
+          )}
+
+
+
           {/* Payment Method */}
           <div className="space-y-2">
             <Label>Forma de Pagamento</Label>
