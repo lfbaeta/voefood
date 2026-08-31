@@ -70,8 +70,8 @@ export function LandingPageSettings({ reseller, onUpdate }: LandingPageSettingsP
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${reseller.id}-landing-logo.${fileExt}`;
-      const filePath = `landing-logos/${fileName}`;
+      const fileName = `landing-logo-${Date.now()}.${fileExt}`;
+      const filePath = `landing-logos/${reseller.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('store-assets')

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useEffectiveRestaurantId } from '@/hooks/useEffectiveRestaurantId';
 
 interface ImageUploadProps {
   bucket: 'product-images' | 'store-assets';
@@ -24,6 +25,7 @@ export function ImageUpload({
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl || null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { restaurantId } = useEffectiveRestaurantId();
 
   // Sync previewUrl with currentUrl prop changes
   useEffect(() => {
@@ -54,13 +56,22 @@ export function ImageUpload({
       return;
     }
 
+    if (!restaurantId) {
+      toast({
+        title: 'Restaurante não identificado',
+        description: 'Recarregue a página e tente novamente',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsUploading(true);
 
     try {
-      // Create unique filename
+      // Create unique filename inside the restaurant folder (tenant isolation)
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = fileName;
+      const filePath = `${restaurantId}/${fileName}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
