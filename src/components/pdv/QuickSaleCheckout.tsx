@@ -79,11 +79,24 @@ export function QuickSaleCheckout({
   const [addressComplement, setAddressComplement] = useState('');
   const [addressReference, setAddressReference] = useState('');
 
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+
   const isDelivery = selectedOrderType === 'delivery';
 
   const { restaurantId } = useAdminRestaurant();
   const { data: store } = useStoreConfig();
   const createOrder = useCreateOrder();
+  const { zones: deliveryZones } = useDeliveryZones();
+
+  const activeZones = useMemo(
+    () => (deliveryZones || []).filter((z: DeliveryZone) => z.is_active),
+    [deliveryZones]
+  );
+  const useZonesMode = activeZones.length > 0 && (store as any)?.delivery_fee_mode === 'zones';
+  const selectedZone = useMemo(
+    () => activeZones.find((z: DeliveryZone) => z.id === selectedZoneId),
+    [activeZones, selectedZoneId]
+  );
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -92,9 +105,17 @@ export function QuickSaleCheckout({
     }).format(value);
   };
 
-  const total = useMemo(() => {
+  const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
   }, [items]);
+
+  const deliveryFee = useMemo(() => {
+    if (!isDelivery) return 0;
+    if (useZonesMode && selectedZone) return Number(selectedZone.fee);
+    return Number((store as any)?.delivery_fee || 0);
+  }, [isDelivery, useZonesMode, selectedZone, store]);
+
+  const total = subtotal + deliveryFee;
 
   const change = useMemo(() => {
     const changeValue = parseFloat(changeFor) || 0;
@@ -103,6 +124,7 @@ export function QuickSaleCheckout({
     }
     return 0;
   }, [changeFor, total, paymentMethod]);
+
 
 
   const handleFinalize = async () => {
