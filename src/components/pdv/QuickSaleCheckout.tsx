@@ -68,9 +68,20 @@ export function QuickSaleCheckout({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
+  // Delivery customer registration
+  const [deliveryName, setDeliveryName] = useState(customerName || '');
+  const [deliveryPhone, setDeliveryPhone] = useState('');
+  const [addressStreet, setAddressStreet] = useState('');
+  const [addressNumber, setAddressNumber] = useState('');
+  const [addressNeighborhood, setAddressNeighborhood] = useState('');
+  const [addressComplement, setAddressComplement] = useState('');
+  const [addressReference, setAddressReference] = useState('');
+
+  const isDelivery = selectedOrderType === 'delivery';
+
   const { restaurantId } = useAdminRestaurant();
   const { data: store } = useStoreConfig();
-  const { openTable, addItem, closeTable } = useTableOrderMutations();
+  const createOrder = useCreateOrder();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -90,6 +101,7 @@ export function QuickSaleCheckout({
     }
     return 0;
   }, [changeFor, total, paymentMethod]);
+
 
   const handleFinalize = async () => {
     if (!restaurantId) {
