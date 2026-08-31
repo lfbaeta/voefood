@@ -109,49 +109,60 @@ export function QuickSaleCheckout({
       return;
     }
 
+    if (isDelivery) {
+      if (!deliveryName.trim() || !deliveryPhone.trim() || !addressStreet.trim() || !addressNumber.trim() || !addressNeighborhood.trim()) {
+        toast.error('Preencha os dados do cliente e o endereço de entrega');
+        return;
+      }
+    }
+
     setIsProcessing(true);
 
     try {
-      // 1. Create a quick sale order (table_id = null)
-      const order = await openTable.mutateAsync({
-        tableId: null, // No table for quick sale
-        customerCount: 1,
-        waiterName: customerName || (selectedOrderType === 'delivery' ? 'Delivery' : selectedOrderType === 'pickup' ? 'Retirada' : 'Balcão'),
-        orderType: selectedOrderType as any,
+      const typeLabel =
+        selectedOrderType === 'delivery' ? 'Delivery' :
+        selectedOrderType === 'pickup' ? 'Retirada' : 'Balcão';
+
+      const mappedPayment: 'money' | 'card' | 'pix' =
+        paymentMethod === 'pix' ? 'pix' : paymentMethod === 'money' ? 'money' : 'card';
+
+      // Cria o pedido na fila de produção (aparece em Pedidos e na Cozinha)
+      const created = await createOrder.mutateAsync({
+        order: {
+          customer_name: isDelivery ? deliveryName.trim() : (customerName?.trim() || typeLabel),
+          customer_phone: isDelivery ? deliveryPhone.trim() : '',
+          address_street: isDelivery ? addressStreet.trim() : typeLabel,
+          address_number: isDelivery ? addressNumber.trim() : '-',
+          address_neighborhood: isDelivery ? addressNeighborhood.trim() : '-',
+          address_complement: isDelivery ? (addressComplement.trim() || null) : null,
+          address_reference: isDelivery ? (addressReference.trim() || null) : `Venda Rápida - ${typeLabel}`,
+          total_amount: total,
+          payment_method: mappedPayment,
+          change_for: paymentMethod === 'money' ? (parseFloat(changeFor) || null) : null,
+          restaurant_id: restaurantId,
+        },
+        items: items.map((item) => {
+          const addonsText = item.addons.length > 0 ? item.addons.map(a => a.optionName).join(', ') : '';
+          const fullObservation = [addonsText, item.observation].filter(Boolean).join(' - ');
+          return {
+            product_id: item.productId,
+            product_name: item.productName,
+            quantity: item.quantity,
+            unit_price: item.unitPrice + item.addons.reduce((s, a) => s + a.price, 0),
+            observation: fullObservation || null,
+            addons_snapshot: item.addons.length > 0
+              ? item.addons.map(a => ({ label: a.optionName, price: a.price }))
+              : null,
+          };
+        }),
       });
 
-      const orderId = order.id;
-
-      // 2. Add items to the order
-      for (const item of items) {
-        const addonsText = item.addons.length > 0
-          ? item.addons.map(a => a.optionName).join(', ')
-          : '';
-        const fullObservation = [addonsText, item.observation].filter(Boolean).join(' - ');
-
-        await addItem.mutateAsync({
-          orderId,
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice + item.addons.reduce((s, a) => s + a.price, 0),
-          observation: fullObservation || undefined,
-        });
-      }
-
-      // 3. Close the order immediately
-      await closeTable.mutateAsync({
-        orderId,
-        tableId: null,
-        paymentMethod,
-        discount: 0,
-        discountType: 'value',
-        serviceFeeEnabled: false,
-        totalAmount: total,
-      });
+      const orderId = created.id;
 
       setIsComplete(true);
-      toast.success('Venda finalizada com sucesso!');
+      toast.success('Venda enviada para produção!');
+
+
 
       // Auto print (respects settings) — one ticket per department
       try {
