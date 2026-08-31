@@ -22,6 +22,7 @@ interface EnhanceWithAIButtonProps {
  */
 export function EnhanceWithAIButton({ imageUrl, onEnhanced, disabled }: EnhanceWithAIButtonProps) {
   const { toast } = useToast();
+  const { restaurantId } = useEffectiveRestaurantId();
   const { enhance, isEnhancing } = useImageEnhancer();
   const { data: quota } = useEnhancementQuota();
   const [open, setOpen] = useState(false);
