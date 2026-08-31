@@ -343,9 +343,21 @@ export function QuickSaleCheckout({
                 ))}
               </div>
             </ScrollArea>
-            <div className="border-t mt-3 pt-3 flex justify-between">
-              <span className="font-bold">Total</span>
-              <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
+            <div className="border-t mt-3 pt-3 space-y-1 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal</span>
+                <span>{formatCurrency(subtotal)}</span>
+              </div>
+              {isDelivery && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Taxa de entrega</span>
+                  <span>{formatCurrency(deliveryFee)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1">
+                <span className="font-bold">Total</span>
+                <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
+              </div>
             </div>
           </div>
 
