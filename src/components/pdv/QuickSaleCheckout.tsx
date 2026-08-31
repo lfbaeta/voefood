@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { useCreateOrder } from '@/hooks/useOrders';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
 import { useStoreConfig } from '@/hooks/useStore';
+import { useDeliveryZones, DeliveryZone } from '@/hooks/useDeliveryZones';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { autoPrintOrder } from '@/lib/autoPrint';
 import { loadDepartmentLookups, splitItemsByDepartment, DEPARTMENT_LABELS, Department } from '@/lib/departmentRouting';
 import { printReceiptBrowser, PrintOrderData } from '@/utils/thermalPrinter';
@@ -77,11 +79,24 @@ export function QuickSaleCheckout({
   const [addressComplement, setAddressComplement] = useState('');
   const [addressReference, setAddressReference] = useState('');
 
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('');
+
   const isDelivery = selectedOrderType === 'delivery';
 
   const { restaurantId } = useAdminRestaurant();
   const { data: store } = useStoreConfig();
   const createOrder = useCreateOrder();
+  const { zones: deliveryZones } = useDeliveryZones();
+
+  const activeZones = useMemo(
+    () => (deliveryZones || []).filter((z: DeliveryZone) => z.is_active),
+    [deliveryZones]
+  );
+  const useZonesMode = activeZones.length > 0 && (store as any)?.delivery_fee_mode === 'zones';
+  const selectedZone = useMemo(
+    () => activeZones.find((z: DeliveryZone) => z.id === selectedZoneId),
+    [activeZones, selectedZoneId]
+  );
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -90,9 +105,17 @@ export function QuickSaleCheckout({
     }).format(value);
   };
 
-  const total = useMemo(() => {
+  const subtotal = useMemo(() => {
     return items.reduce((sum, item) => sum + item.totalPrice, 0);
   }, [items]);
+
+  const deliveryFee = useMemo(() => {
+    if (!isDelivery) return 0;
+    if (useZonesMode && selectedZone) return Number(selectedZone.fee);
+    return Number((store as any)?.delivery_fee || 0);
+  }, [isDelivery, useZonesMode, selectedZone, store]);
+
+  const total = subtotal + deliveryFee;
 
   const change = useMemo(() => {
     const changeValue = parseFloat(changeFor) || 0;
@@ -103,6 +126,7 @@ export function QuickSaleCheckout({
   }, [changeFor, total, paymentMethod]);
 
 
+
   const handleFinalize = async () => {
     if (!restaurantId) {
       toast.error('Restaurante não identificado');
@@ -110,8 +134,13 @@ export function QuickSaleCheckout({
     }
 
     if (isDelivery) {
-      if (!deliveryName.trim() || !deliveryPhone.trim() || !addressStreet.trim() || !addressNumber.trim() || !addressNeighborhood.trim()) {
+      const hoodOk = useZonesMode ? !!selectedZone : !!addressNeighborhood.trim();
+      if (!deliveryName.trim() || !deliveryPhone.trim() || !addressStreet.trim() || !addressNumber.trim() || !hoodOk) {
         toast.error('Preencha os dados do cliente e o endereço de entrega');
+        return;
+      }
+      if (selectedZone?.min_order_value && subtotal < Number(selectedZone.min_order_value)) {
+        toast.error(`Pedido mínimo para ${selectedZone.name}: ${formatCurrency(Number(selectedZone.min_order_value))}`);
         return;
       }
     }
@@ -133,7 +162,9 @@ export function QuickSaleCheckout({
           customer_phone: isDelivery ? deliveryPhone.trim() : '',
           address_street: isDelivery ? addressStreet.trim() : typeLabel,
           address_number: isDelivery ? addressNumber.trim() : '-',
-          address_neighborhood: isDelivery ? addressNeighborhood.trim() : '-',
+          address_neighborhood: isDelivery
+            ? (useZonesMode && selectedZone ? selectedZone.name : addressNeighborhood.trim())
+            : '-',
           address_complement: isDelivery ? (addressComplement.trim() || null) : null,
           address_reference: isDelivery ? (addressReference.trim() || null) : `Venda Rápida - ${typeLabel}`,
           total_amount: total,
@@ -312,9 +343,21 @@ export function QuickSaleCheckout({
                 ))}
               </div>
             </ScrollArea>
-            <div className="border-t mt-3 pt-3 flex justify-between">
-              <span className="font-bold">Total</span>
-              <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
+            <div className="border-t mt-3 pt-3 space-y-1 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Subtotal</span>
+                <span>{formatCurrency(subtotal)}</span>
+              </div>
+              {isDelivery && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Taxa de entrega</span>
+                  <span>{formatCurrency(deliveryFee)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1">
+                <span className="font-bold">Total</span>
+                <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
+              </div>
             </div>
           </div>
 
@@ -341,7 +384,22 @@ export function QuickSaleCheckout({
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="delHood">Bairro *</Label>
-                  <Input id="delHood" value={addressNeighborhood} onChange={(e) => setAddressNeighborhood(e.target.value)} placeholder="Bairro" />
+                  {useZonesMode ? (
+                    <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+                      <SelectTrigger id="delHood">
+                        <SelectValue placeholder="Selecione o bairro" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeZones.map((zone: DeliveryZone) => (
+                          <SelectItem key={zone.id} value={zone.id}>
+                            {zone.name} - {formatCurrency(Number(zone.fee))}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input id="delHood" value={addressNeighborhood} onChange={(e) => setAddressNeighborhood(e.target.value)} placeholder="Bairro" />
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="delComp">Complemento</Label>
