@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { useCreateOrder } from '@/hooks/useOrders';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
 import { useStoreConfig } from '@/hooks/useStore';
+import { useDeliveryZones, DeliveryZone } from '@/hooks/useDeliveryZones';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { autoPrintOrder } from '@/lib/autoPrint';
 import { loadDepartmentLookups, splitItemsByDepartment, DEPARTMENT_LABELS, Department } from '@/lib/departmentRouting';
 import { printReceiptBrowser, PrintOrderData } from '@/utils/thermalPrinter';
