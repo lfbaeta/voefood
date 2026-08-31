@@ -6,6 +6,7 @@ import { useImageEnhancer, useEnhancementQuota } from '@/hooks/useImageEnhancer'
 import { BeforeAfterViewer } from './BeforeAfterViewer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useEffectiveRestaurantId } from '@/hooks/useEffectiveRestaurantId';
 
 interface EnhanceWithAIButtonProps {
   imageUrl: string | null | undefined;
