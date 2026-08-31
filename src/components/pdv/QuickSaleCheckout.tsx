@@ -162,7 +162,9 @@ export function QuickSaleCheckout({
           customer_phone: isDelivery ? deliveryPhone.trim() : '',
           address_street: isDelivery ? addressStreet.trim() : typeLabel,
           address_number: isDelivery ? addressNumber.trim() : '-',
-          address_neighborhood: isDelivery ? addressNeighborhood.trim() : '-',
+          address_neighborhood: isDelivery
+            ? (useZonesMode && selectedZone ? selectedZone.name : addressNeighborhood.trim())
+            : '-',
           address_complement: isDelivery ? (addressComplement.trim() || null) : null,
           address_reference: isDelivery ? (addressReference.trim() || null) : `Venda Rápida - ${typeLabel}`,
           total_amount: total,
