@@ -134,8 +134,13 @@ export function QuickSaleCheckout({
     }
 
     if (isDelivery) {
-      if (!deliveryName.trim() || !deliveryPhone.trim() || !addressStreet.trim() || !addressNumber.trim() || !addressNeighborhood.trim()) {
+      const hoodOk = useZonesMode ? !!selectedZone : !!addressNeighborhood.trim();
+      if (!deliveryName.trim() || !deliveryPhone.trim() || !addressStreet.trim() || !addressNumber.trim() || !hoodOk) {
         toast.error('Preencha os dados do cliente e o endereço de entrega');
+        return;
+      }
+      if (selectedZone?.min_order_value && subtotal < Number(selectedZone.min_order_value)) {
+        toast.error(`Pedido mínimo para ${selectedZone.name}: ${formatCurrency(Number(selectedZone.min_order_value))}`);
         return;
       }
     }
