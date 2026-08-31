@@ -294,7 +294,7 @@ export function QuickSaleCheckout({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-hidden">
+        <div className="flex-1 space-y-4 overflow-y-auto pr-1">
           {/* Items Summary */}
           <div className="border rounded-xl p-4">
             <h3 className="font-semibold mb-2">
