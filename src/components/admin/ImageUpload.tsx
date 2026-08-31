@@ -56,13 +56,22 @@ export function ImageUpload({
       return;
     }
 
+    if (!restaurantId) {
+      toast({
+        title: 'Restaurante não identificado',
+        description: 'Recarregue a página e tente novamente',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsUploading(true);
 
     try {
-      // Create unique filename
+      // Create unique filename inside the restaurant folder (tenant isolation)
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = fileName;
+      const filePath = `${restaurantId}/${fileName}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
