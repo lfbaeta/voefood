@@ -197,7 +197,7 @@ export function QuickSaleCheckout({
               orderNumber: orderId,
               orderType: 'quick_sale',
               departmentLabel: DEPARTMENT_LABELS[dep],
-              customerName: customerName || 'Balcão',
+              customerName: isDelivery ? deliveryName : (customerName || 'Balcão'),
               items: depItems.map(buildPrintItem),
               subtotal: depTotal,
               total: depTotal,
