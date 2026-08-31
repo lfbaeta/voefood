@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { useTableOrderMutations } from '@/hooks/useTableOrders';
+import { useCreateOrder } from '@/hooks/useOrders';
 import { useAdminRestaurant } from '@/hooks/useAdminRestaurant';
 import { useStoreConfig } from '@/hooks/useStore';
 import { autoPrintOrder } from '@/lib/autoPrint';
@@ -68,9 +68,20 @@ export function QuickSaleCheckout({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
+  // Delivery customer registration
+  const [deliveryName, setDeliveryName] = useState(customerName || '');
+  const [deliveryPhone, setDeliveryPhone] = useState('');
+  const [addressStreet, setAddressStreet] = useState('');
+  const [addressNumber, setAddressNumber] = useState('');
+  const [addressNeighborhood, setAddressNeighborhood] = useState('');
+  const [addressComplement, setAddressComplement] = useState('');
+  const [addressReference, setAddressReference] = useState('');
+
+  const isDelivery = selectedOrderType === 'delivery';
+
   const { restaurantId } = useAdminRestaurant();
   const { data: store } = useStoreConfig();
-  const { openTable, addItem, closeTable } = useTableOrderMutations();
+  const createOrder = useCreateOrder();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -91,55 +102,67 @@ export function QuickSaleCheckout({
     return 0;
   }, [changeFor, total, paymentMethod]);
 
+
   const handleFinalize = async () => {
     if (!restaurantId) {
       toast.error('Restaurante não identificado');
       return;
     }
 
+    if (isDelivery) {
+      if (!deliveryName.trim() || !deliveryPhone.trim() || !addressStreet.trim() || !addressNumber.trim() || !addressNeighborhood.trim()) {
+        toast.error('Preencha os dados do cliente e o endereço de entrega');
+        return;
+      }
+    }
+
     setIsProcessing(true);
 
     try {
-      // 1. Create a quick sale order (table_id = null)
-      const order = await openTable.mutateAsync({
-        tableId: null, // No table for quick sale
-        customerCount: 1,
-        waiterName: customerName || (selectedOrderType === 'delivery' ? 'Delivery' : selectedOrderType === 'pickup' ? 'Retirada' : 'Balcão'),
-        orderType: selectedOrderType as any,
+      const typeLabel =
+        selectedOrderType === 'delivery' ? 'Delivery' :
+        selectedOrderType === 'pickup' ? 'Retirada' : 'Balcão';
+
+      const mappedPayment: 'money' | 'card' | 'pix' =
+        paymentMethod === 'pix' ? 'pix' : paymentMethod === 'money' ? 'money' : 'card';
+
+      // Cria o pedido na fila de produção (aparece em Pedidos e na Cozinha)
+      const created = await createOrder.mutateAsync({
+        order: {
+          customer_name: isDelivery ? deliveryName.trim() : (customerName?.trim() || typeLabel),
+          customer_phone: isDelivery ? deliveryPhone.trim() : '',
+          address_street: isDelivery ? addressStreet.trim() : typeLabel,
+          address_number: isDelivery ? addressNumber.trim() : '-',
+          address_neighborhood: isDelivery ? addressNeighborhood.trim() : '-',
+          address_complement: isDelivery ? (addressComplement.trim() || null) : null,
+          address_reference: isDelivery ? (addressReference.trim() || null) : `Venda Rápida - ${typeLabel}`,
+          total_amount: total,
+          payment_method: mappedPayment,
+          change_for: paymentMethod === 'money' ? (parseFloat(changeFor) || null) : null,
+          restaurant_id: restaurantId,
+        },
+        items: items.map((item) => {
+          const addonsText = item.addons.length > 0 ? item.addons.map(a => a.optionName).join(', ') : '';
+          const fullObservation = [addonsText, item.observation].filter(Boolean).join(' - ');
+          return {
+            product_id: item.productId,
+            product_name: item.productName,
+            quantity: item.quantity,
+            unit_price: item.unitPrice + item.addons.reduce((s, a) => s + a.price, 0),
+            observation: fullObservation || null,
+            addons_snapshot: item.addons.length > 0
+              ? item.addons.map(a => ({ label: a.optionName, price: a.price }))
+              : null,
+          };
+        }),
       });
 
-      const orderId = order.id;
-
-      // 2. Add items to the order
-      for (const item of items) {
-        const addonsText = item.addons.length > 0
-          ? item.addons.map(a => a.optionName).join(', ')
-          : '';
-        const fullObservation = [addonsText, item.observation].filter(Boolean).join(' - ');
-
-        await addItem.mutateAsync({
-          orderId,
-          productId: item.productId,
-          productName: item.productName,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice + item.addons.reduce((s, a) => s + a.price, 0),
-          observation: fullObservation || undefined,
-        });
-      }
-
-      // 3. Close the order immediately
-      await closeTable.mutateAsync({
-        orderId,
-        tableId: null,
-        paymentMethod,
-        discount: 0,
-        discountType: 'value',
-        serviceFeeEnabled: false,
-        totalAmount: total,
-      });
+      const orderId = created.id;
 
       setIsComplete(true);
-      toast.success('Venda finalizada com sucesso!');
+      toast.success('Venda enviada para produção!');
+
+
 
       // Auto print (respects settings) — one ticket per department
       try {
@@ -174,7 +197,7 @@ export function QuickSaleCheckout({
               orderNumber: orderId,
               orderType: 'quick_sale',
               departmentLabel: DEPARTMENT_LABELS[dep],
-              customerName: customerName || 'Balcão',
+              customerName: isDelivery ? deliveryName : (customerName || 'Balcão'),
               items: depItems.map(buildPrintItem),
               subtotal: depTotal,
               total: depTotal,
@@ -271,7 +294,7 @@ export function QuickSaleCheckout({
           </div>
         </DialogHeader>
 
-        <div className="flex-1 space-y-4 overflow-hidden">
+        <div className="flex-1 space-y-4 overflow-y-auto pr-1">
           {/* Items Summary */}
           <div className="border rounded-xl p-4">
             <h3 className="font-semibold mb-2">
@@ -294,6 +317,45 @@ export function QuickSaleCheckout({
               <span className="text-xl font-bold text-primary">{formatCurrency(total)}</span>
             </div>
           </div>
+
+          {/* Delivery customer registration */}
+          {isDelivery && (
+            <div className="border rounded-xl p-4 space-y-3">
+              <h3 className="font-semibold">Dados do cliente (entrega)</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="delName">Nome *</Label>
+                  <Input id="delName" value={deliveryName} onChange={(e) => setDeliveryName(e.target.value)} placeholder="Nome do cliente" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="delPhone">Telefone / WhatsApp *</Label>
+                  <Input id="delPhone" value={deliveryPhone} onChange={(e) => setDeliveryPhone(e.target.value)} placeholder="(00) 00000-0000" />
+                </div>
+                <div className="space-y-1 col-span-2">
+                  <Label htmlFor="delStreet">Rua *</Label>
+                  <Input id="delStreet" value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} placeholder="Rua / Avenida" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="delNumber">Número *</Label>
+                  <Input id="delNumber" value={addressNumber} onChange={(e) => setAddressNumber(e.target.value)} placeholder="123" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="delHood">Bairro *</Label>
+                  <Input id="delHood" value={addressNeighborhood} onChange={(e) => setAddressNeighborhood(e.target.value)} placeholder="Bairro" />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="delComp">Complemento</Label>
+                  <Input id="delComp" value={addressComplement} onChange={(e) => setAddressComplement(e.target.value)} placeholder="Apto, bloco..." />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="delRef">Referência</Label>
+                  <Input id="delRef" value={addressReference} onChange={(e) => setAddressReference(e.target.value)} placeholder="Ponto de referência" />
+                </div>
+              </div>
+            </div>
+          )}
+
+
 
           {/* Payment Method */}
           <div className="space-y-2">
