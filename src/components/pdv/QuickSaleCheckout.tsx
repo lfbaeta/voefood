@@ -384,7 +384,22 @@ export function QuickSaleCheckout({
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="delHood">Bairro *</Label>
-                  <Input id="delHood" value={addressNeighborhood} onChange={(e) => setAddressNeighborhood(e.target.value)} placeholder="Bairro" />
+                  {useZonesMode ? (
+                    <Select value={selectedZoneId} onValueChange={setSelectedZoneId}>
+                      <SelectTrigger id="delHood">
+                        <SelectValue placeholder="Selecione o bairro" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {activeZones.map((zone: DeliveryZone) => (
+                          <SelectItem key={zone.id} value={zone.id}>
+                            {zone.name} - {formatCurrency(Number(zone.fee))}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input id="delHood" value={addressNeighborhood} onChange={(e) => setAddressNeighborhood(e.target.value)} placeholder="Bairro" />
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="delComp">Complemento</Label>
