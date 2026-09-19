@@ -33,7 +33,7 @@ export default function Landing() {
     landing_page_whatsapp: '5511999999999',
     landing_page_email: 'contato@cardapiodigital.com',
     landing_page_logo: null,
-    primary_color: '45 100% 51%',
+    primary_color: '16 88% 66%',
     secondary_color: '220 10% 20%',
     landing_testimonials: [
       {
@@ -139,7 +139,10 @@ export default function Landing() {
   const reseller = data?.reseller || defaultReseller;
   const plans = data?.plans?.length ? data.plans : defaultPlans;
   
-  const primaryColor = reseller.primary_color || '45 100% 51%';
+  const configuredPrimaryColor = reseller.primary_color;
+  const primaryColor = !configuredPrimaryColor || configuredPrimaryColor === '45 100% 51%'
+    ? '16 88% 66%'
+    : configuredPrimaryColor;
   const whatsappLink = reseller.landing_page_whatsapp 
     ? `https://wa.me/${reseller.landing_page_whatsapp}?text=Olá! Tenho interesse no sistema de cardápio digital.`
     : `https://wa.me/5511999999999?text=Olá! Tenho interesse no sistema de cardápio digital.`;
