@@ -139,9 +139,7 @@ export default function Landing() {
   const plans = data?.plans?.length ? data.plans : defaultPlans;
   
   const primaryColor = reseller.primary_color || '28 100% 65%';
-  const whatsappLink = reseller.landing_page_whatsapp 
-    ? `https://wa.me/${reseller.landing_page_whatsapp}?text=Olá! Tenho interesse no sistema de cardápio digital.`
-    : `https://wa.me/5511999999999?text=Olá! Tenho interesse no sistema de cardápio digital.`;
+  const whatsappLink = 'https://wa.me/5513991424545?text=' + encodeURIComponent('Estou vindo do Site Voefood e queria mais informações.');
 
   const testimonials = (reseller as any).landing_testimonials || defaultReseller.landing_testimonials;
   const faq = (reseller as any).landing_faq || defaultReseller.landing_faq;
