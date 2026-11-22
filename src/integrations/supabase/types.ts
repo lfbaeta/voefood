@@ -552,6 +552,27 @@ export type Database = {
           },
         ]
       }
+      business_type_defaults: {
+        Row: {
+          business_type: string
+          capabilities: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          business_type: string
+          capabilities?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          business_type?: string
+          capabilities?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cash_movements: {
         Row: {
           amount: number
@@ -2959,6 +2980,7 @@ export type Database = {
           name: string
           phone: string | null
           primary_color: string | null
+          root_domain: string | null
           secondary_color: string | null
           slug: string | null
           updated_at: string
@@ -2989,6 +3011,7 @@ export type Database = {
           name: string
           phone?: string | null
           primary_color?: string | null
+          root_domain?: string | null
           secondary_color?: string | null
           slug?: string | null
           updated_at?: string
@@ -3019,6 +3042,7 @@ export type Database = {
           name?: string
           phone?: string | null
           primary_color?: string | null
+          root_domain?: string | null
           secondary_color?: string | null
           slug?: string | null
           updated_at?: string
@@ -4570,6 +4594,7 @@ export type Database = {
           name: string | null
           phone: string | null
           primary_color: string | null
+          root_domain: string | null
           secondary_color: string | null
           slug: string | null
           updated_at: string | null
@@ -4594,6 +4619,7 @@ export type Database = {
           name?: string | null
           phone?: string | null
           primary_color?: string | null
+          root_domain?: string | null
           secondary_color?: string | null
           slug?: string | null
           updated_at?: string | null
@@ -4618,6 +4644,7 @@ export type Database = {
           name?: string | null
           phone?: string | null
           primary_color?: string | null
+          root_domain?: string | null
           secondary_color?: string | null
           slug?: string | null
           updated_at?: string | null
