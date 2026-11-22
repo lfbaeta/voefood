@@ -552,27 +552,6 @@ export type Database = {
           },
         ]
       }
-      business_type_defaults: {
-        Row: {
-          business_type: string
-          capabilities: Json
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          business_type: string
-          capabilities?: Json
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          business_type?: string
-          capabilities?: Json
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       cash_movements: {
         Row: {
           amount: number
@@ -1272,6 +1251,111 @@ export type Database = {
           status?: string
           updated_at?: string
           webhook_token?: string
+        }
+        Relationships: []
+      }
+      evolution_send_attempts: {
+        Row: {
+          attempts: Json | null
+          conversation_id: string | null
+          created_at: string
+          endpoint: string | null
+          error: string | null
+          http_status: number | null
+          id: string
+          instance_id: string | null
+          instance_name: string | null
+          key_source: string | null
+          message_id: string | null
+          ok: boolean
+          order_id: number | null
+          preview: string | null
+          restaurant_id: string | null
+          source: string
+          target: string | null
+        }
+        Insert: {
+          attempts?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          endpoint?: string | null
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          instance_id?: string | null
+          instance_name?: string | null
+          key_source?: string | null
+          message_id?: string | null
+          ok?: boolean
+          order_id?: number | null
+          preview?: string | null
+          restaurant_id?: string | null
+          source?: string
+          target?: string | null
+        }
+        Update: {
+          attempts?: Json | null
+          conversation_id?: string | null
+          created_at?: string
+          endpoint?: string | null
+          error?: string | null
+          http_status?: number | null
+          id?: string
+          instance_id?: string | null
+          instance_name?: string | null
+          key_source?: string | null
+          message_id?: string | null
+          ok?: boolean
+          order_id?: number | null
+          preview?: string | null
+          restaurant_id?: string | null
+          source?: string
+          target?: string | null
+        }
+        Relationships: []
+      }
+      evolution_webhook_events: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          direction: string | null
+          error: string | null
+          event: string
+          id: string
+          instance_id: string | null
+          instance_name: string | null
+          payload_summary: Json | null
+          restaurant_id: string | null
+          status: string
+          wa_message_id: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          direction?: string | null
+          error?: string | null
+          event: string
+          id?: string
+          instance_id?: string | null
+          instance_name?: string | null
+          payload_summary?: Json | null
+          restaurant_id?: string | null
+          status?: string
+          wa_message_id?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          direction?: string | null
+          error?: string | null
+          event?: string
+          id?: string
+          instance_id?: string | null
+          instance_name?: string | null
+          payload_summary?: Json | null
+          restaurant_id?: string | null
+          status?: string
+          wa_message_id?: string | null
         }
         Relationships: []
       }
@@ -2553,10 +2637,6 @@ export type Database = {
           pizza_pricing_rule: string
           price: number
           price_per_kg: number | null
-          promo_enabled: boolean
-          promo_ends_at: string | null
-          promo_price: number | null
-          promo_starts_at: string | null
           requires_prescription: boolean
           restaurant_id: string | null
           stock_qty: number | null
@@ -2586,10 +2666,6 @@ export type Database = {
           pizza_pricing_rule?: string
           price?: number
           price_per_kg?: number | null
-          promo_enabled?: boolean
-          promo_ends_at?: string | null
-          promo_price?: number | null
-          promo_starts_at?: string | null
           requires_prescription?: boolean
           restaurant_id?: string | null
           stock_qty?: number | null
@@ -2619,10 +2695,6 @@ export type Database = {
           pizza_pricing_rule?: string
           price?: number
           price_per_kg?: number | null
-          promo_enabled?: boolean
-          promo_ends_at?: string | null
-          promo_price?: number | null
-          promo_starts_at?: string | null
           requires_prescription?: boolean
           restaurant_id?: string | null
           stock_qty?: number | null
@@ -2887,7 +2959,6 @@ export type Database = {
           name: string
           phone: string | null
           primary_color: string | null
-          root_domain: string | null
           secondary_color: string | null
           slug: string | null
           updated_at: string
@@ -2918,7 +2989,6 @@ export type Database = {
           name: string
           phone?: string | null
           primary_color?: string | null
-          root_domain?: string | null
           secondary_color?: string | null
           slug?: string | null
           updated_at?: string
@@ -2949,7 +3019,6 @@ export type Database = {
           name?: string
           phone?: string | null
           primary_color?: string | null
-          root_domain?: string | null
           secondary_color?: string | null
           slug?: string | null
           updated_at?: string
@@ -3465,7 +3534,6 @@ export type Database = {
         Row: {
           accent_color: string | null
           address: string | null
-          auth_password_required: boolean
           auto_print_delivery: boolean
           auto_print_enabled: boolean
           auto_print_quick_sale: boolean
@@ -3526,7 +3594,6 @@ export type Database = {
         Insert: {
           accent_color?: string | null
           address?: string | null
-          auth_password_required?: boolean
           auto_print_delivery?: boolean
           auto_print_enabled?: boolean
           auto_print_quick_sale?: boolean
@@ -3587,7 +3654,6 @@ export type Database = {
         Update: {
           accent_color?: string | null
           address?: string | null
-          auth_password_required?: boolean
           auto_print_delivery?: boolean
           auto_print_enabled?: boolean
           auto_print_quick_sale?: boolean
@@ -4008,6 +4074,7 @@ export type Database = {
       }
       tables: {
         Row: {
+          bill_requested_at: string | null
           capacity: number | null
           created_at: string | null
           current_order_id: number | null
@@ -4017,8 +4084,10 @@ export type Database = {
           restaurant_id: string | null
           status: string | null
           updated_at: string | null
+          waiter_called_at: string | null
         }
         Insert: {
+          bill_requested_at?: string | null
           capacity?: number | null
           created_at?: string | null
           current_order_id?: number | null
@@ -4028,8 +4097,10 @@ export type Database = {
           restaurant_id?: string | null
           status?: string | null
           updated_at?: string | null
+          waiter_called_at?: string | null
         }
         Update: {
+          bill_requested_at?: string | null
           capacity?: number | null
           created_at?: string | null
           current_order_id?: number | null
@@ -4039,6 +4110,7 @@ export type Database = {
           restaurant_id?: string | null
           status?: string | null
           updated_at?: string | null
+          waiter_called_at?: string | null
         }
         Relationships: [
           {
@@ -4141,6 +4213,7 @@ export type Database = {
           phone_e164: string
           restaurant_id: string
           updated_at: string
+          wa_lid: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -4151,6 +4224,7 @@ export type Database = {
           phone_e164: string
           restaurant_id: string
           updated_at?: string
+          wa_lid?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -4161,6 +4235,7 @@ export type Database = {
           phone_e164?: string
           restaurant_id?: string
           updated_at?: string
+          wa_lid?: string | null
         }
         Relationships: []
       }
@@ -4225,6 +4300,7 @@ export type Database = {
           media_url: string | null
           reply_to_id: string | null
           restaurant_id: string
+          send_error: string | null
           sender_user_id: string | null
           sent_at: string | null
           status: string
@@ -4243,6 +4319,7 @@ export type Database = {
           media_url?: string | null
           reply_to_id?: string | null
           restaurant_id: string
+          send_error?: string | null
           sender_user_id?: string | null
           sent_at?: string | null
           status?: string
@@ -4261,6 +4338,7 @@ export type Database = {
           media_url?: string | null
           reply_to_id?: string | null
           restaurant_id?: string
+          send_error?: string | null
           sender_user_id?: string | null
           sent_at?: string | null
           status?: string
@@ -4492,7 +4570,6 @@ export type Database = {
           name: string | null
           phone: string | null
           primary_color: string | null
-          root_domain: string | null
           secondary_color: string | null
           slug: string | null
           updated_at: string | null
@@ -4517,7 +4594,6 @@ export type Database = {
           name?: string | null
           phone?: string | null
           primary_color?: string | null
-          root_domain?: string | null
           secondary_color?: string | null
           slug?: string | null
           updated_at?: string | null
@@ -4542,20 +4618,10 @@ export type Database = {
           name?: string | null
           phone?: string | null
           primary_color?: string | null
-          root_domain?: string | null
           secondary_color?: string | null
           slug?: string | null
           updated_at?: string | null
           user_id?: string | null
-        }
-        Relationships: []
-      }
-      restaurants_public: {
-        Row: {
-          id: string | null
-          is_active: boolean | null
-          name: string | null
-          slug: string | null
         }
         Relationships: []
       }
@@ -4667,6 +4733,10 @@ export type Database = {
         Args: { p_driver_id: string; p_order_id: number }
         Returns: undefined
       }
+      can_write_store_asset: {
+        Args: { _name: string; _user_id: string }
+        Returns: boolean
+      }
       claim_due_bot_debounce: {
         Args: { p_limit?: number }
         Returns: {
@@ -4699,42 +4769,24 @@ export type Database = {
         Args: { p_from: string; p_qty: number; p_to: string }
         Returns: number
       }
-      create_customer_order:
-        | {
-            Args: {
-              p_address_complement: string
-              p_address_neighborhood: string
-              p_address_number: string
-              p_address_reference: string
-              p_address_street: string
-              p_change_for: number
-              p_customer_name: string
-              p_customer_phone: string
-              p_items: Json
-              p_payment_method: string
-              p_restaurant_id: string
-              p_total_amount: number
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              p_address_complement: string
-              p_address_neighborhood: string
-              p_address_number: string
-              p_address_reference: string
-              p_address_street: string
-              p_change_for: number
-              p_convenience_fee?: number
-              p_customer_name: string
-              p_customer_phone: string
-              p_items: Json
-              p_payment_method: string
-              p_restaurant_id: string
-              p_total_amount: number
-            }
-            Returns: number
-          }
+      create_customer_order: {
+        Args: {
+          p_address_complement: string
+          p_address_neighborhood: string
+          p_address_number: string
+          p_address_reference: string
+          p_address_street: string
+          p_change_for: number
+          p_convenience_fee?: number
+          p_customer_name: string
+          p_customer_phone: string
+          p_items: Json
+          p_payment_method: string
+          p_restaurant_id: string
+          p_total_amount: number
+        }
+        Returns: number
+      }
       decrypt_ai_credential: {
         Args: { p_cipher: string; p_key: string }
         Returns: string
@@ -5021,6 +5073,18 @@ export type Database = {
           slug: string
         }[]
       }
+      get_public_restaurant: {
+        Args: { p_id?: string; p_slug?: string }
+        Returns: {
+          business_subtype: string
+          capabilities_override: Json
+          id: string
+          is_active: boolean
+          name: string
+          plan_id: string
+          slug: string
+        }[]
+      }
       get_public_store_config: {
         Args: { p_restaurant_id: string }
         Returns: {
@@ -5190,6 +5254,10 @@ export type Database = {
         Returns: boolean
       }
       is_restaurant_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_store_accepting_orders: {
+        Args: { p_restaurant_id: string }
+        Returns: boolean
+      }
       list_active_drivers: {
         Args: { p_restaurant_id: string }
         Returns: {
@@ -5224,15 +5292,6 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
-      }
-      list_public_restaurants: {
-        Args: never
-        Returns: {
-          id: string
-          is_active: boolean
-          name: string
-          slug: string
-        }[]
       }
       mark_customer_notification_read: {
         Args: {
@@ -5302,10 +5361,6 @@ export type Database = {
           total_amount: number
         }[]
       }
-      storage_tenant_write_allowed: {
-        Args: { _name: string; _uid: string }
-        Returns: boolean
-      }
       submit_delivery_rating: {
         Args: {
           p_comment?: string
@@ -5324,6 +5379,14 @@ export type Database = {
           last_seen: string
           status: string
         }[]
+      }
+      table_customer_request: {
+        Args: {
+          p_request: string
+          p_restaurant_id: string
+          p_table_number: number
+        }
+        Returns: Json
       }
       update_driver_settings: {
         Args: {
@@ -5392,12 +5455,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5421,11 +5484,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5446,11 +5509,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5471,11 +5534,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -5488,11 +5551,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
